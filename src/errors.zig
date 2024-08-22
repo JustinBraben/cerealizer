@@ -1,5 +1,4 @@
 pub const SerializeError = error{
-    NoError,
     MandatoryFieldMissed,
     OptionalFieldMissed,
     CorruptedArchive,
