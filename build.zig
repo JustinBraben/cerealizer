@@ -2,6 +2,7 @@ const std = @import("std");
 
 const examples = [_][]const u8 {
     "simple",
+    "std_lib",
 };
 
 pub fn build(b: *std.Build) void {
@@ -29,7 +30,7 @@ pub fn build(b: *std.Build) void {
         });
         example.root_module.addImport("cerealizer", cerealizer_mod);
 
-        const compile_step = b.step("compile-" ++ example_name, "Compile " ++ example_name);
+        const compile_step = b.step(example_name, "Build " ++ example_name);
         compile_step.dependOn(&b.addInstallArtifact(example, .{}).step);
         b.getInstallStep().dependOn(compile_step);
 
