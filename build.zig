@@ -1,0 +1,146 @@
+const std = @import("std");
+
+const examples = [_][]const u8 {
+    "simple",
+};
+
+pub fn build(b: *std.Build) void {
+    const cerealizer_mod = b.addModule("cerealizer", .{ .root_source_file = b.path("src/cerealizer.zig") });
+
+    const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
+
+    const test_step = b.step("test", "Run all tests in all modes.");
+    const tests = b.addTest(.{
+        .root_source_file = b.path("src/cerealizer.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const run_tests = b.addRunArtifact(tests);
+    test_step.dependOn(&run_tests.step);
+
+    const example_step = b.step("examples", "Build examples");
+    inline for (examples) |example_name| {
+        const example = b.addExecutable(.{
+            .name = example_name,
+            .root_source_file = b.path("examples/" ++ example_name ++ ".zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        example.root_module.addImport("cerealizer", cerealizer_mod);
+
+        const compile_step = b.step("compile-" ++ example_name, "Compile " ++ example_name);
+        compile_step.dependOn(&b.addInstallArtifact(example, .{}).step);
+        b.getInstallStep().dependOn(compile_step);
+
+        const run_cmd = b.addRunArtifact(example);
+        run_cmd.step.dependOn(compile_step);
+
+        const run_step = b.step("run-" ++ example_name, "Run " ++ example_name);
+        run_step.dependOn(&run_cmd.step);
+    }
+
+    // const docs_step = b.step("docs", "Generate docs.");
+    // const install_docs = b.addInstallDirectory(.{
+    //     .source_dir = tests.getEmittedDocs(),
+    //     .install_dir = .prefix,
+    //     .install_subdir = "docs",
+    // });
+    // docs_step.dependOn(&install_docs.step);
+
+    // const readme_step = b.step("readme", "Remake README.");
+    // const readme = readMeStep(b);
+    // readme.dependOn(example_step);
+    // readme_step.dependOn(readme);
+
+    const all_step = b.step("all", "Build everything and runs all tests");
+    all_step.dependOn(test_step);
+    all_step.dependOn(example_step);
+    // all_step.dependOn(readme_step);
+
+    b.default_step.dependOn(all_step);
+}
+
+// Although this function looks imperative, note that its job is to
+// declaratively construct a build graph that will be executed by an external
+// runner.
+pub fn buildDeprecated(b: *std.Build) void {
+    // const cerealizer_mod = b.addModule("cerealizer", .{ .root_source_file = b.path("src/cerealizer.zig") });
+
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const lib = b.addStaticLibrary(.{
+        .name = "cerealizer",
+        // In this case the main source file is merely a path, however, in more
+        // complicated build scripts, this could be a generated file.
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // This declares intent for the library to be installed into the standard
+    // location when the user invokes the "install" step (the default step when
+    // running `zig build`).
+    b.installArtifact(lib);
+
+    const exe = b.addExecutable(.{
+        .name = "cerealizer",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // This declares intent for the executable to be installed into the
+    // standard location when the user invokes the "install" step (the default
+    // step when running `zig build`).
+    b.installArtifact(exe);
+
+    // This *creates* a Run step in the build graph, to be executed when another
+    // step is evaluated that depends on it. The next line below will establish
+    // such a dependency.
+    const run_cmd = b.addRunArtifact(exe);
+
+    // By making the run step depend on the install step, it will be run from the
+    // installation directory rather than directly from within the cache directory.
+    // This is not necessary, however, if the application depends on other installed
+    // files, this ensures they will be present and in the expected location.
+    run_cmd.step.dependOn(b.getInstallStep());
+
+    // This allows the user to pass arguments to the application in the build
+    // command itself, like this: `zig build run -- arg1 arg2 etc`
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
+    // This creates a build step. It will be visible in the `zig build --help` menu,
+    // and can be selected like this: `zig build run`
+    // This will evaluate the `run` step rather than the default, which is "install".
+    const run_step = b.step("run", "Run the app");
+    run_step.dependOn(&run_cmd.step);
+
+    // Creates a step for unit testing. This only builds the test executable
+    // but does not run it.
+    const lib_unit_tests = b.addTest(.{
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
+
+    const exe_unit_tests = b.addTest(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+
+    // Similar to creating the run step earlier, this exposes a `test` step to
+    // the `zig build --help` menu, providing a way for the user to request
+    // running the unit tests.
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_lib_unit_tests.step);
+    test_step.dependOn(&run_exe_unit_tests.step);
+}
