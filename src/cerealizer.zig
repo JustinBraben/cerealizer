@@ -1,5 +1,12 @@
 const std = @import("std");
 
+pub const Buffers = @import("buffers.zig");
+pub const ResizableOutputBuffer = Buffers.ResizableOutputBuffer;
+
+comptime {
+    _ = @import("buffers.zig");
+}
+
 pub fn Serialize(object: anytype) SerializeInterface(@TypeOf(object)) {
     return .{ .original_object = object };
 }
@@ -8,7 +15,7 @@ fn SerializeInterface(comptime T: type) type {
     return struct {
         const Self = @This();
         original_object: T,
-        
+
         pub fn serialize(self: Self, writer: anytype) !void {
             try serializeValue(self.original_object, writer);
         }
