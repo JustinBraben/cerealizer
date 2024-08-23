@@ -60,8 +60,7 @@ pub const OutputBuffer = struct {
             },
             .Pointer => |ptr_info| switch (ptr_info.size) {
                 .One => {
-                    // return self.putPrimitive(value.*)
-                    const bytes = std.mem.asBytes(&value);
+                    const bytes = std.mem.asBytes(value);
                     const len = if (std.mem.indexOfScalar(u8, bytes, 0)) |null_pos| null_pos else bytes.len;
                     var dest_ptr: []u8 = undefined;
                     if (len <= self.end_index) {
@@ -73,7 +72,6 @@ pub const OutputBuffer = struct {
                 },
                 .Slice => {
                     const bytes = std.mem.sliceAsBytes(value);
-                    // return self.putSlice(std.mem.sliceAsBytes(value))
                     const len = if (std.mem.indexOfScalar(u8, bytes, 0)) |null_pos| null_pos else bytes.len;
                     var dest_ptr: []u8 = undefined;
                     if (len <= self.end_index) {
@@ -98,6 +96,20 @@ pub const OutputBuffer = struct {
             },
             else => @compileError("Unsupported type"),
         }
+    }
+
+    pub fn allData(self: *Self) []const u8 {
+        return self.data[self.begin_index..self.end_index];
+    }
+
+    pub fn size(self: *Self) usize {
+        assert(self.begin_index <= self.current_index);
+        self.current_index - self.begin_index;
+    }
+
+    pub fn available(self: *Self) usize {
+        assert(self.current_index <= self.end_index);
+        return self.end_index - self.current_index;
     }
     
     pub fn clear(self: *Self) void {
@@ -127,8 +139,11 @@ test "OutputBuffer basic functionality" {
     try testing.expectEqual(@as(usize, 8), outputBuffer.current_index);
     try outputBuffer.put(@as(f32, 100.4));
     try testing.expectEqual(@as(usize, 12), outputBuffer.current_index);
+    try outputBuffer.put("Hello");
+    try testing.expectEqual(@as(usize, 17), outputBuffer.current_index);
 
-    outputBuffer.clear();
+    // Only compare the exact number of bytes written
+    try testing.expectEqualSlices(u8, "Hello", outputBuffer.data[12..17]);
 
     const person = Person{
         .name = "Alice",
@@ -136,7 +151,9 @@ test "OutputBuffer basic functionality" {
         .hobbies = &[_][]const u8{ "reading", "cycling" },
     };
     try outputBuffer.put(person);
-    try testing.expectEqual(@as(usize, 5), outputBuffer.current_index);
+    try testing.expectEqual(@as(usize, 22), outputBuffer.current_index);
+
+    // std.debug.print("{s}", .{outputBuffer.data[0..]});
 }
 
 pub const ResizableOutputBuffer = struct {
@@ -267,6 +284,8 @@ test "ResizableOutputBuffer basic functionality" {
     // Test putting data after clear
     try buffer.put(@as(u64, 0x1122334455667788));
     try testing.expectEqual(@as(usize, 8), buffer.size());
+
+    // std.debug.print("{s}", .{buffer.data[0..]});
 }
 
 test "ResizableOutputBuffer resizing" {
