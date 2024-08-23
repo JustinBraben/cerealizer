@@ -8,13 +8,13 @@ const Errors = @import("errors.zig");
 const SerializeError = Errors.SerializeError;
 const Utils = @import("details/utils.zig");
 
-pub const FixedOutputBuffer = struct {
+pub const OutputBuffer = struct {
     const Self = @This();
 
     allocator: Allocator,
-    data: []const u8,
+    data: []u8,
     begin_index: usize,
-    current: []u8,
+    current_index: usize,
     end_index: usize,
 
     pub fn init(allocator: Allocator, capacity: usize) !Self {
@@ -23,7 +23,7 @@ pub const FixedOutputBuffer = struct {
             .allocator = allocator,
             .data = _data,
             .begin_index = 0,
-            .current = _data,
+            .current_index = 0,
             .end_index = capacity,
         };
     }
@@ -35,57 +35,108 @@ pub const FixedOutputBuffer = struct {
     pub fn put(self: *Self, value: anytype) SerializeError!void {
         const T = @TypeOf(value);
         switch (@typeInfo(T)) {
-            .Bool => return self.putBool(value),
+            .Bool => {
+                const val_to_put = if (value) @as(u8, 1) else @as(u8, 0);
+                const bytes = std.mem.asBytes(&val_to_put);
+                const len = if (std.mem.indexOfScalar(u8, bytes, 0)) |null_pos| null_pos else bytes.len;
+                var dest_ptr: []u8 = undefined;
+                if (len <= self.end_index) {
+                    const start = self.current_index;
+                    self.current_index += len;
+                    dest_ptr = self.data[start..self.current_index];
+                    @memcpy(dest_ptr, bytes[0..len]);
+                }
+            },
+            .Int, .Float => {
+                const bytes = std.mem.asBytes(&value);
+                const len = if (std.mem.indexOfScalar(u8, bytes, 0)) |null_pos| null_pos else bytes.len;
+                var dest_ptr: []u8 = undefined;
+                if (len <= self.end_index) {
+                    const start = self.current_index;
+                    self.current_index += len;
+                    dest_ptr = self.data[start..self.current_index];
+                    @memcpy(dest_ptr, bytes[0..len]);
+                }
+            },
+            .Pointer => |ptr_info| switch (ptr_info.size) {
+                .One => {
+                    // return self.putPrimitive(value.*)
+                    const bytes = std.mem.asBytes(&value);
+                    const len = if (std.mem.indexOfScalar(u8, bytes, 0)) |null_pos| null_pos else bytes.len;
+                    var dest_ptr: []u8 = undefined;
+                    if (len <= self.end_index) {
+                        const start = self.current_index;
+                        self.current_index += len;
+                        dest_ptr = self.data[start..self.current_index];
+                        @memcpy(dest_ptr, bytes[0..len]);
+                    }
+                },
+                .Slice => {
+                    const bytes = std.mem.sliceAsBytes(value);
+                    // return self.putSlice(std.mem.sliceAsBytes(value))
+                    const len = if (std.mem.indexOfScalar(u8, bytes, 0)) |null_pos| null_pos else bytes.len;
+                    var dest_ptr: []u8 = undefined;
+                    if (len <= self.end_index) {
+                        const start = self.current_index;
+                        self.current_index += len;
+                        dest_ptr = self.data[start..self.current_index];
+                        @memcpy(dest_ptr, bytes[0..len]);
+                    }
+                },
+                else => @compileError("Unsupported pointer type"),
+            },
+            .Struct => {
+                const bytes = std.mem.asBytes(&value);
+                const len = if (std.mem.indexOfScalar(u8, bytes, 0)) |null_pos| null_pos else bytes.len;
+                var dest_ptr: []u8 = undefined;
+                if (len <= self.end_index) {
+                    const start = self.current_index;
+                    self.current_index += len;
+                    dest_ptr = self.data[start..self.current_index];
+                    @memcpy(dest_ptr, bytes[0..len]);
+                }
+            },
             else => @compileError("Unsupported type"),
         }
     }
-
-    fn putBool(self: *Self, value: bool) SerializeError!void {
-        return self.putPrimitive(if (value) @as(u8, 1) else @as(u8, 0));
+    
+    pub fn clear(self: *Self) void {
+        self.current_index = 0;
     }
+};
 
-    fn putPrimitive(self: *Self, value: anytype) SerializeError!void {
-        const bytes = std.mem.asBytes(&value);
-        return self.putSlice(bytes);
-    }
-
-    fn putSlice(self: *Self, slice: []const u8) SerializeError!void {
-        const len = if (std.mem.indexOfScalar(u8, slice, 0)) |null_pos| null_pos else slice.len;
-        const ptr = self.getPtr(len) orelse return SerializeError.NotEnoughMemory;
-        @memcpy(ptr, slice[0..len]);
-    }
-
-    fn getPtr(self: *Self, inputSize: usize) ?[]u8 {
-        if (inputSize <= self.end_index) {
-            const start = self.current;
-            self.current += inputSize;
-            self.available -= inputSize;
-            return self.data[start..self.current];
-        }
-
-        return null;
-    }
-
-    pub fn getCapacity(self: *Self) usize {
-        return self.end_index;
-    }
+const Person = struct {
+    name: []const u8,
+    age: u32,
+    hobbies: []const []const u8,
 };
 
 test "OutputBuffer basic functionality" {
     const allocator = std.testing.allocator;
-    var fixedBuffer = try FixedOutputBuffer.init(allocator, 1024);
-    defer fixedBuffer.deinit();
-
-    // const array = [*]u8{'H', 'e', 'l', 'l', 'o'};
-    // var ptr: [*]const u8 = &array;
-
-    // try expect(ptr[0] == 1);
-    // ptr += 1;
-    // try expect(ptr[0] == 2);
+    var outputBuffer = try OutputBuffer.init(allocator, 1024);
+    defer outputBuffer.deinit();
 
     // Test putting different types of data
-    // try fixedBuffer.put(true);
-    // try testing.expectEqual(@as(usize, 1), fixedBuffer.size());
+    try outputBuffer.put(true);
+    try testing.expectEqual(@as(usize, 1), outputBuffer.current_index);
+    try outputBuffer.put(@as(u8, 42));
+    try testing.expectEqual(@as(usize, 2), outputBuffer.current_index);
+    try outputBuffer.put(@as(u32, 0x12345678));
+    try testing.expectEqual(@as(usize, 6), outputBuffer.current_index);
+    try outputBuffer.put(@as(f16, 63.2));
+    try testing.expectEqual(@as(usize, 8), outputBuffer.current_index);
+    try outputBuffer.put(@as(f32, 100.4));
+    try testing.expectEqual(@as(usize, 12), outputBuffer.current_index);
+
+    outputBuffer.clear();
+
+    const person = Person{
+        .name = "Alice",
+        .age = 30,
+        .hobbies = &[_][]const u8{ "reading", "cycling" },
+    };
+    try outputBuffer.put(person);
+    try testing.expectEqual(@as(usize, 5), outputBuffer.current_index);
 }
 
 pub const ResizableOutputBuffer = struct {
