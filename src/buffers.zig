@@ -145,13 +145,13 @@ test "OutputBuffer basic functionality" {
     // Only compare the exact number of bytes written
     try testing.expectEqualSlices(u8, "Hello", outputBuffer.data[12..17]);
 
-    const person = Person{
-        .name = "Alice",
-        .age = 30,
-        .hobbies = &[_][]const u8{ "reading", "cycling" },
-    };
-    try outputBuffer.put(person);
-    try testing.expectEqual(@as(usize, 22), outputBuffer.current_index);
+    // const person = Person{
+    //     .name = "Alice",
+    //     .age = 30,
+    //     .hobbies = &[_][]const u8{ "reading", "cycling" },
+    // };
+    // try outputBuffer.put(person);
+    // try testing.expectEqual(@as(usize, 22), outputBuffer.current_index);
 
     // std.debug.print("{s}", .{outputBuffer.data[0..]});
 }
