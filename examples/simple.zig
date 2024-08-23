@@ -39,5 +39,22 @@ pub fn main() !void {
 
     log.info("Serialized: {s}\n", .{json_string});
 
+    // var stream = std.io.fixedBufferStream(json_string);
+    // var reader = stream.reader();
+    // const deserializer = cerealizer.Deserialize(Person);
+    // const deserialized_object = try deserializer.toObject(allocator, reader);
+    // defer allocator.free(deserialized_object.name);
+    // defer allocator.free(deserialized_object.hobbies);
+    // for (deserialized_object.hobbies) |hobby| {
+    //     allocator.free(hobby);
+    // }
+
+    // std.debug.print("Name: {s}, Age: {d}\n", .{deserialized_object.name, deserialized_object.age});
+    // for (deserialized_object.hobbies) |hobby| {
+    //     std.debug.print("Hobby: {s}\n", .{hobby});
+    // }
+
+    // _ = &reader;
+
     debug.print("Print from simple.zig example\n", .{});
 }
