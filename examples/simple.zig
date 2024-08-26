@@ -33,7 +33,7 @@ pub fn main() !void {
         .hobbies = &[_][]const u8{ "reading", "cycling" },
     };
     
-    const serialized = cerealizer.Serialize(person);
+    var serialized = cerealizer.Serialize(person);
     const json_string = try serialized.toOwnedString(allocator);
     defer allocator.free(json_string);
 

@@ -19,7 +19,7 @@ fn SerializeInterface(comptime T: type) type {
         const Self = @This();
         original_object: T,
 
-        pub fn serialize(self: Self, writer: anytype) !void {
+        pub fn serialize(self: *Self, writer: anytype) !void {
             try serializeValue(self.original_object, writer);
         }
 
@@ -81,7 +81,7 @@ fn SerializeInterface(comptime T: type) type {
             }
         }
 
-        pub fn toOwnedString(self: Self, allocator: std.mem.Allocator) ![]u8 {
+        pub fn toOwnedString(self: *Self, allocator: std.mem.Allocator) ![]u8 {
             var list = std.ArrayList(u8).init(allocator);
             defer list.deinit();
             try self.serialize(list.writer());
