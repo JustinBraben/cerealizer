@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const examples = [_][]const u8 {
+    "simple_deserialize",
     "simple",
     "std_lib",
 };
