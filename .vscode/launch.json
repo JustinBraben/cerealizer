@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(Windows) Launch simple_deserialize",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/simple_deserialize.exe",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            // "stopAtEntry": false,
+            "args": [
+                "run-simple_deserialize"
+            ],
+            "preLaunchTask": "build"
+        }
+    ]
+}
