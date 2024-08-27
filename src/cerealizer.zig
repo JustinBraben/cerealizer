@@ -110,110 +110,172 @@ fn DeserializeInterface(comptime T: type) type {
 
         fn deserializeValue(comptime ValueType: type, allocator: std.mem.Allocator, reader: anytype) !ValueType {
             switch (@typeInfo(ValueType)) {
+                // .Struct => {
+                //     var value: ValueType = undefined;
+                //     var valid_read = false;
+                //     const first_byte = try reader.readByte(); // Skip opening '{'
+                //     var most_recent_byte = first_byte;
+                //     valid_read = (most_recent_byte == '{');
+
+                //     while (valid_read) {
+                //         const next_char = reader.readByte() catch |err| {
+                //             return err;
+                //         };
+
+                //         switch (next_char) {
+                //             ' ', '\t', '\n', '\r' => { 
+                //                 if (most_recent_byte == '{' or 
+                //                     most_recent_byte == ' ' or most_recent_byte == '\t' or most_recent_byte == '\n' or most_recent_byte == '\r') 
+                //                 {
+                //                     most_recent_byte = next_char;
+                //                     continue;
+                //                 }
+                //                 return error.InvalidWhitespace;
+                //             },
+                //             '"' => {
+                //                 const field_name = try readString(allocator, reader);
+                //                 defer allocator.free(field_name);
+
+                //                 const colon = try reader.readByte();
+                //                 if (colon != ':') return error.ExpectedColon;
+                //             },
+                //             ':' => {
+
+                //             },
+                //             else => {
+                                
+                //             }
+                //         }
+                //     }
+                // },
                 .Struct => {
+                    // Initialize the struct
                     var value: ValueType = undefined;
-                    var valid_read = false;
-                    const first_byte = try reader.readByte(); // Skip opening '{'
-                    var most_recent_byte = first_byte;
-                    valid_read = (most_recent_byte == '{');
 
-                    // Keep reading so long as valid read
-                    // with return from this function if it ends nicely on '}'
-                    while (valid_read) {
-                        const byte = reader.readByte() catch |err| {
-                            return err;
+                    // Read fields until we hit the closing '}'
+                    var read_something = false;
+
+                    while (true) {
+                        // Try to read the next character, handling EOF
+                        const next_char = reader.readByte() catch |err| switch (err) {
+                            error.EndOfStream => if (read_something) return value else return err,
+                            else => return err,
                         };
-                        var whitespace_read = false;
-                        whitespace_read = (byte == ' ' or byte == '\t' or byte == '\n' or byte == '\r');
 
-                        switch (byte) {
-                            ' ', '\t', '\n', '\r' => { 
-                                if (most_recent_byte == '{' or 
-                                    most_recent_byte == ' ' or most_recent_byte == '\t' or most_recent_byte == '\n' or most_recent_byte == '\r') 
-                                {
-                                    most_recent_byte = byte;
-                                    continue;
-                                }
-                                return error.Whitespace;
-                            },
-                            '"' => {
-                                const field_name = (try reader.readUntilDelimiterOrEofAlloc(allocator, '"', 1024)) orelse return error.UnexpectedEndOfStream;
-                                defer allocator.free(field_name);
-                                const colon = try reader.readByte();
-                                if (colon != ':') return error.ExpectedColon;
-                                // Find and parse field
-                                inline for (std.meta.fields(ValueType)) |field| {
-                                    if (std.mem.eql(u8, field.name, field_name)) {
-                                        @field(value, field.name) = try deserializeValue(field.type, allocator, reader);
-                                        break;
-                                    }
-                                // inline for returned a null
-                                } else {
-                                    // Skip unknown field
-                                    try skipValue(reader);
-                                }
-                            },
-                            else => {
-                                return error.UnexpectedByte;
-                            }
+                        // Skip opening '{'
+                        if (next_char == '{') {
+                            if (!read_something) continue;
                         }
-                    }
+                        
 
-                    return error.InvalidRead;
+                        // Check if we've reached the end of the object
+                        if (next_char == '}') {
+                            if (read_something) return value;
+                            return error.UnexpectedCharacter;
+                        }
+
+                        // Handle comma between fields
+                        if (read_something) {
+                            // if (next_char != ',') return error.ExpectedComma;
+                            if (next_char == ',') continue;
+                            // Skip whitespace after comma
+                            // only skip whitespace next_car is whitespace
+                            // try skipWhitespace(reader);
+                        } else if (isWhitespace(next_char)) {
+                            // Skip leading whitespace
+                            try skipWhitespace(reader);
+                        }
+
+                        if (next_char != '"') return error.ExpectedString;
+                        const field_name = try readString(allocator, reader);
+                        defer allocator.free(field_name);
+
+                        // Expect and skip colon
+                        const colon = try reader.readByte();
+                        if (colon != ':') return error.ExpectedColon;
+                        
+                        // Skip whitespace after colon
+                        //try skipWhitespace(reader);
+
+                        // Find and parse field
+                        inline for (std.meta.fields(ValueType)) |field| {
+                            if (std.mem.eql(u8, field.name, field_name)) {
+                                @field(value, field.name) = try deserializeValue(field.type, allocator, reader);
+                                read_something = true;
+                                break;
+                            }
+                        } else {
+                            // Skip unknown field
+                            try skipValue(reader);
+                        }
+
+                        // Skip whitespace after value
+                        // only skip whitespace if it is
+                        // try skipWhitespace(reader);
+                    }
                 },
                 .Array => |info| {
-                    if (info.child == u8) {
-                        const quote = try reader.readByte();
-                        if (quote != '"') return error.ExpectedString;
-                        var value: ValueType = undefined;
-                        _ = try reader.readUntilDelimiterOrEof(&value, '"') orelse return error.UnexpectedEndOfStream;
-                        return value;
-                    } else {
-                        var value: ValueType = undefined;
-                        _ = try reader.readByte(); // Skip opening '['
-                        for (&value, 0..) |*item, i| {
-                            if (i > 0) {
-                                const comma = try reader.readByte();
-                                if (comma != ',') return error.ExpectedComma;
+                    std.debug.print(".Array info : {}\n", .{info});
+                    switch(info.child) {
+                        u8 => {
+                            const quote = try reader.readByte();
+                            if (quote != '"') return error.ExpectedString;
+                            var value: ValueType = undefined;
+                            _ = try reader.readUntilDelimiterOrEof(&value, '"') orelse return error.UnexpectedEndOfStream;
+                            return value;
+                        },
+                        else => {
+                            var value: ValueType = undefined;
+                            _ = try reader.readByte(); // Skip opening '['
+                            for (&value, 0..) |*item, i| {
+                                if (i > 0) {
+                                    const comma = try reader.readByte();
+                                    if (comma != ',') return error.ExpectedComma;
+                                }
+                                item.* = try deserializeValue(info.child, allocator, reader);
                             }
-                            item.* = try deserializeValue(info.child, allocator, reader);
+                            const closing = try reader.readByte();
+                            if (closing != ']') return error.ExpectedClosingBracket;
+                            return value;
                         }
-                        const closing = try reader.readByte();
-                        if (closing != ']') return error.ExpectedClosingBracket;
-                        return value;
                     }
                 },
                 .Pointer => |info| {
-                    if (info.size == .Slice) {
-                        if (info.child == u8) {
-                            const quote = try reader.readByte();
-                            if (quote != '"') return error.ExpectedString;
-                            return (try reader.readUntilDelimiterOrEofAlloc(allocator, '"', 1024)) orelse return error.UnexpectedEndOfStream;
-                        } else {
-                            var list = std.ArrayList(info.child).init(allocator);
-                            errdefer list.deinit();
-                            _ = try reader.readByte(); // Skip opening '['
-                            var first = true;
-                            while (true) {
-                                const byte = reader.readByte() catch |err| switch (err) {
-                                    error.EndOfStream => return error.UnexpectedEndOfStream,
-                                    else => return err,
-                                };
-                                if (byte == ']') break;
-                                if (!first) {
-                                    if (byte != ',') return error.ExpectedComma;
+                    std.debug.print(".Pointer info : {}\n", .{info});
+                    switch (info.size) {
+                        .Slice => {
+                                if (info.child == u8) {
+                                const quote = try reader.readByte();
+                                std.debug.print("next_char : {}\n", .{quote});
+                                if (quote != '"') return error.ExpectedString;
+                                return try readString(allocator, reader);
+                            } else {
+                                var list = std.ArrayList(info.child).init(allocator);
+                                errdefer list.deinit();
+                                _ = try reader.readByte(); // Skip opening '['
+                                var first = true;
+                                while (true) {
+                                    const byte = reader.readByte() catch |err| switch (err) {
+                                        error.EndOfStream => return error.UnexpectedEndOfStream,
+                                        else => return err,
+                                    };
+                                    if (byte == ']') break;
+                                    if (!first) {
+                                        if (byte != ',') return error.ExpectedComma;
+                                    }
+                                    if (first) {
+                                        try reader.skipBytes(1, .{});
+                                    }
+                                    const item = try deserializeValue(info.child, allocator, reader);
+                                    try list.append(item);
+                                    first = false;
                                 }
-                                if (first) {
-                                    try reader.skipBytes(1, .{});
-                                }
-                                const item = try deserializeValue(info.child, allocator, reader);
-                                try list.append(item);
-                                first = false;
+                                return list.toOwnedSlice();
                             }
-                            return list.toOwnedSlice();
+                        },
+                        else => {
+                            @compileError("Unsupported pointer type");
                         }
-                    } else {
-                        @compileError("Unsupported pointer type");
                     }
                 },
                 .Int, .Float => {
@@ -239,6 +301,33 @@ fn DeserializeInterface(comptime T: type) type {
                 },
                 else => @compileError("Unsupported type: " ++ @typeName(ValueType)),
             }
+        }
+
+        // Helper function to skip whitespace
+        fn skipWhitespace(reader: anytype) !void {
+            while (true) {
+                const byte = reader.readByte() catch |err| switch (err) {
+                    error.EndOfStream => return,
+                    else => return err,
+                };
+                if (!isWhitespace(byte)) {
+                    try reader.skipBytes(1, .{});
+                    return;
+                }
+            }
+        }
+
+        // Helper function to check if a byte is whitespace
+        fn isWhitespace(byte: u8) bool {
+            return byte == ' ' or byte == '\t' or byte == '\n' or byte == '\r';
+        }
+
+        // Helper function to read a JSON string
+        fn readString(allocator: std.mem.Allocator, reader: anytype) ![]const u8 {
+            // const quote = try reader.readByte();
+            // std.debug.print("quote : {}\n", .{quote});
+            // if (quote != '"') return error.ExpectedString;
+            return (try reader.readUntilDelimiterOrEofAlloc(allocator, '"', 1024)) orelse return error.UnexpectedEndOfStream;
         }
 
         fn skipValue(reader: anytype) !void {
