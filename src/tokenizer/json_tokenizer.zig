@@ -35,6 +35,7 @@ pub const JsonToken = struct {
         eof,
         keyword_true,
         keyword_false,
+        keyword_null,
 
         pub fn lexeme(tag: Tag) ?[]const u8 {
             return switch (tag) {
@@ -56,6 +57,7 @@ pub const JsonToken = struct {
                 .comma => ",",
                 .keyword_true => "true",
                 .keyword_false => "false",
+                .keyword_null => "null",
             };
         }
 
@@ -321,6 +323,34 @@ test "bool json" {
             .colon,
             .whitespace,
             .keyword_false,
+            .r_brace
+        });
+}
+
+test "int json" {
+    const json_string_false = "{\"int_number\": 43}";
+    try testTokenize(
+        json_string_false, 
+        &.{
+            .l_brace,
+            .string,
+            .colon,
+            .whitespace,
+            .number,
+            .r_brace
+        });
+}
+
+test "float json" {
+    const json_string_false = "{\"float_number\": 43.29}";
+    try testTokenize(
+        json_string_false, 
+        &.{
+            .l_brace,
+            .string,
+            .colon,
+            .whitespace,
+            .number,
             .r_brace
         });
 }

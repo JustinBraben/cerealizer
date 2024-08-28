@@ -323,4 +323,5 @@ fn DeserializeInterface(comptime T: type) type {
 comptime {
     _ = @import("buffers.zig");
     _ = @import("tokenizer/json_tokenizer.zig");
+    _ = @import("parser/json_parser.zig");
 }
