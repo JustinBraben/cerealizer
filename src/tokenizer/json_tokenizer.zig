@@ -11,14 +11,15 @@ pub const JsonToken = struct {
 
     pub const Tag = enum {
         invalid,
-        l_paren,
-        r_paren,
+        l_bracket,
+        r_bracket,
         l_brace,
         r_brace,
         colon,
         comma,
         string,
         number,
+        period,
         keyword,
         whitespace,
         eof,
@@ -33,10 +34,11 @@ pub const JsonToken = struct {
                 .eof
                 => null,
 
-                .l_paren => "(",
-                .r_paren => ")",
+                .l_bracket => "[",
+                .r_bracket => "]",
                 .l_brace => "{",
                 .r_brace => "}",
+                .period => ".",
                 .colon => ":",
                 .comma => ",",
             };
@@ -70,7 +72,11 @@ pub const JsonTokenizer = struct {
     const State = enum {
         start,
         string,
-        number,
+        int,
+        int_exponent,
+        int_period,
+        float,
+        float_exponent,
         keyword,
         whitespace,
         invalid
@@ -140,6 +146,11 @@ pub const JsonTokenizer = struct {
                         self.index += 1;
                         break;
                     },
+                    '.' => {
+                        result.tag = .period;
+                        self.index += 1;
+                        break;
+                    },
                     '0'...'9' => {
                         state = .int;
                         result.tag = .number;
@@ -158,8 +169,64 @@ pub const JsonTokenizer = struct {
                 },
 
                 .string => switch (c) {
-                    'a'...'z', 'A'...'Z', '_', '0'...'9' => continue,
+                    0 => {
+                        if (self.index != self.buffer.len) {
+                            state = .invalid;
+                            continue;
+                        }
+                        result.tag = .invalid;
+                        break;
+                    },
+                    '\n' => {
+                        result.tag = .invalid;
+                        break;
+                    },
+                    '"' => {
+                        self.index += 1;
+                        break;
+                    },
+                    0x01...0x09, 0x0b...0x1f, 0x7f => {
+                        state = .invalid;
+                    },
+                    else => continue,
+                },
+
+                .int => switch (c) {
+                    '.' => state = .int_period,
+                    '_', 'a'...'d', 'f'...'o', 'q'...'z', 'A'...'D', 'F'...'O', 'Q'...'Z', '0'...'9' => continue,
+                    'e', 'E', 'p', 'P' => state = .int_exponent,
                     else => break,
+                },
+                .int_exponent => switch (c) {
+                    '-', '+' => {
+                        state = .float;
+                    },
+                    else => {
+                        self.index -= 1;
+                        state = .int;
+                    },
+                },
+                .int_period => switch (c) {
+                    '_', 'a'...'d', 'f'...'o', 'q'...'z', 'A'...'D', 'F'...'O', 'Q'...'Z', '0'...'9' => {
+                        state = .float;
+                    },
+                    'e', 'E', 'p', 'P' => state = .float_exponent,
+                    else => {
+                        self.index -= 1;
+                        break;
+                    },
+                },
+                .float => switch (c) {
+                    '_', 'a'...'d', 'f'...'o', 'q'...'z', 'A'...'D', 'F'...'O', 'Q'...'Z', '0'...'9' => continue,
+                    'e', 'E', 'p', 'P' => state = .float_exponent,
+                    else => break,
+                },
+                .float_exponent => switch (c) {
+                    '-', '+' => state = .float,
+                    else => {
+                        self.index -= 1;
+                        state = .float;
+                    },
                 },
 
                 else => {
