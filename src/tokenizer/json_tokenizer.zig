@@ -270,3 +270,57 @@ pub const JsonTokenizer = struct {
         return result;
     }
 };
+
+fn testTokenize(source: [:0]const u8, expected_token_tags: []const JsonToken.Tag) !void {
+    var tokenizer = JsonTokenizer.init(source);
+    for (expected_token_tags) |expected_token_tag| {
+        const token = tokenizer.next();
+        try std.testing.expectEqual(expected_token_tag, token.tag);
+    }
+    // Last token should always be eof, even when the last token was invalid,
+    // in which case the tokenizer is in an invalid state, which can only be
+    // recovered by opinionated means outside the scope of this implementation.
+    const last_token = tokenizer.next();
+    try std.testing.expectEqual(JsonToken.Tag.eof, last_token.tag);
+    try std.testing.expectEqual(source.len, last_token.loc.start);
+    try std.testing.expectEqual(source.len, last_token.loc.end);
+}
+
+test "simple json" {
+    const json_string = "{\"name\":\"John\"}";
+    try testTokenize(
+        json_string, 
+        &.{
+            .l_brace,
+            .string,
+            .colon,
+            .string,
+            .r_brace
+        });
+}
+
+test "bool json" {
+    const json_string_true = "{\"is_active\": true}";
+    try testTokenize(
+        json_string_true, 
+        &.{
+            .l_brace,
+            .string,
+            .colon,
+            .whitespace,
+            .keyword_true,
+            .r_brace
+        });
+
+    const json_string_false = "{\"is_a_good_liar\": false}";
+    try testTokenize(
+        json_string_false, 
+        &.{
+            .l_brace,
+            .string,
+            .colon,
+            .whitespace,
+            .keyword_false,
+            .r_brace
+        });
+}
