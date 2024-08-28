@@ -9,8 +9,18 @@ pub const JsonToken = struct {
         end: usize,
     };
 
+    pub const keywords = std.StaticStringMap(Tag).initComptime(.{
+        .{ "true", .keyword_true },
+        .{ "false", .keyword_false },
+    });
+
+    pub fn getKeyword(bytes: []const u8) ?Tag {
+        return keywords.get(bytes);
+    }
+
     pub const Tag = enum {
         invalid,
+        identifier,
         l_bracket,
         r_bracket,
         l_brace,
@@ -23,10 +33,13 @@ pub const JsonToken = struct {
         keyword,
         whitespace,
         eof,
+        keyword_true,
+        keyword_false,
 
         pub fn lexeme(tag: Tag) ?[]const u8 {
             return switch (tag) {
                 .invalid,
+                .identifier,
                 .string,
                 .number,
                 .keyword,
@@ -41,12 +54,15 @@ pub const JsonToken = struct {
                 .period => ".",
                 .colon => ":",
                 .comma => ",",
+                .keyword_true => "true",
+                .keyword_false => "false",
             };
         }
 
         pub fn symbol(tag: Tag) []const u8 {
             return tag.lexeme() orelse switch (tag) {
                 .invalid => "invalid token",
+                .identifier => "an identifier",
                 .string => "a string",
                 .number => "a number",
                 .keyword => "a keyword",
@@ -71,6 +87,7 @@ pub const JsonTokenizer = struct {
 
     const State = enum {
         start,
+        identifier,
         string,
         int,
         int_exponent,
@@ -115,6 +132,10 @@ pub const JsonTokenizer = struct {
                     '"' => {
                         state = .string;
                         result.tag = .string;
+                    },
+                    'a'...'z', 'A'...'Z', '_' => {
+                        state = .identifier;
+                        result.tag = .identifier;
                     },
                     '{' => {
                         result.tag = .l_brace;
@@ -166,6 +187,16 @@ pub const JsonTokenizer = struct {
                         break;
                     },
                     else => continue,
+                },
+
+                .identifier => switch (c) {
+                    'a'...'z', 'A'...'Z', '_', '0'...'9' => continue,
+                    else => {
+                        if (JsonToken.getKeyword(self.buffer[result.loc.start..self.index])) |tag| {
+                            result.tag = tag;
+                        }
+                        break;
+                    },
                 },
 
                 .string => switch (c) {
