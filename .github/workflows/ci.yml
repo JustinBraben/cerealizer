@@ -37,6 +37,7 @@ jobs:
             version: master
         - name: Display Zig version
           run: zig version
+          shell: bash  # Use bash shell to ensure compatibility
         - name: Check Nightly build and test
           run: |
             echo "Check Nightly build and test"
@@ -45,6 +46,10 @@ jobs:
             else
               echo "Nightly build failed."
             fi
+          shell: bash  # Use bash shell to ensure compatibility
         - name: Force Success
           if: always()  # This step runs regardless of previous step success/failure
-          run: exit 0
+          run: |
+            echo "Forcing job to succeed."
+            exit 0
+          shell: bash  # Use bash shell to ensure compatibility
