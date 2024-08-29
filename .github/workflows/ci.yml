@@ -42,9 +42,9 @@ jobs:
           run: |
             echo "Check Nightly build and test"
             if zig build test --summary all; then
-              echo "Nightly build succeeded."
+              echo -e "\033[0;32mNightly build succeeded.\033[0m"
             else
-              echo "Nightly build failed."
+              echo -e "\033[0;31mNightly build failed.\033[0m"
             fi
           shell: bash  # Use bash shell to ensure compatibility
         - name: Force Success
