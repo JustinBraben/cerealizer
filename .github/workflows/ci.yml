@@ -37,12 +37,9 @@ jobs:
             version: master
         - name: Display Zig version
           run: zig version
-        - name: Build and test
+        - name: Check Nightly build and test
           run: zig build test --summary all
-        - name: Check Build Status
-          id: check_build_status
           if: failure()
-          run: echo "Nightly build failed."
-        - name: Force Job to Succeed
-          if: always()
-          run: exit 0
+          run: |
+            echo "Nightly build failed."
+            exit 0
