@@ -3,39 +3,46 @@ name: CI
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  stable_build:
-    name: Stable Zig Compile and run Tests
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ windows-2022, macos-latest, ubuntu-latest ]
-
-    steps:
-        - uses: actions/checkout@v3
-        - uses: mlugg/setup-zig@v1
-          with:
-            version: 0.13.0
-        - name: Display Zig version
-          run: zig version
-        - name: Build and test
-          run: zig build test --summary all
-
-  nightly_build:
-    name: Nightly Zig Compile and run Tests
+  zig_build_test:
+    name: Zig ${{ inputs.zig-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-2022]
-    continue-on-error: true
+    continue-on-error: ${{ inputs.continue-on-error }}
+
+    inputs:
+      zig-version:
+        required: true
+        type: string
+      continue-on-error:
+        required: true
+        type: boolean
 
     steps:
-        - uses: actions/checkout@v3
-        - uses: mlugg/setup-zig@v1
-          with:
-            version: master
-        - name: Display Zig version
-          run: zig version
-        - name: Build and test
-          run: zig build test --summary all
+      - uses: actions/checkout@v3
+      - uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ inputs.zig-version }}
+      - name: Display Zig version
+        run: zig version
+      - name: Build and test
+        run: zig build test --summary all
+      - name: Record success or failure
+        if: failure()
+        run: echo "Zig ${{ inputs.zig-version }} on ${{ matrix.os }} failed."
+
+  stable_build:
+    name: Stable Zig Build
+    uses: ./.github/workflows/zig_build_test.yml
+    with:
+      zig-version: '0.13.0'
+      continue-on-error: false
+
+  nightly_build:
+    name: Nightly Zig Build
+    uses: ./.github/workflows/zig_build_test.yml
+    with:
+      zig-version: 'master'
+      continue-on-error: true
