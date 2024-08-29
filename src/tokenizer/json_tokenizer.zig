@@ -301,6 +301,50 @@ test "simple json" {
         });
 }
 
+test "whitespace json" {
+    const json_string_whitespace = "{ \"name\": \"John\" }";
+    try testTokenize(
+        json_string_whitespace, 
+        &.{
+            .l_brace,
+            .whitespace,
+            .string,
+            .colon,
+            .whitespace,
+            .string,
+            .whitespace,
+            .r_brace
+        });
+
+    const json_string_tab = "{\t\"name\":\t\"John\"\t}";
+    try testTokenize(
+        json_string_tab, 
+        &.{
+            .l_brace,
+            .whitespace,
+            .string,
+            .colon,
+            .whitespace,
+            .string,
+            .whitespace,
+            .r_brace
+        });
+
+    const json_string_newline = "{\n\"name\":\n\"John\"\n}";
+    try testTokenize(
+        json_string_newline, 
+        &.{
+            .l_brace,
+            .whitespace,
+            .string,
+            .colon,
+            .whitespace,
+            .string,
+            .whitespace,
+            .r_brace
+        });
+}
+
 test "bool json" {
     const json_string_true = "{\"is_active\": true}";
     try testTokenize(
