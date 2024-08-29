@@ -39,8 +39,8 @@ jobs:
           run: zig version
         - name: Check Nightly build and test
           run: |
-          echo "Check Nightly build and test"
-          zig build test --summary all
+            echo "Check Nightly build and test"
+            zig build test --summary all
         - name: Force Success
           if: always()  # This step runs regardless of previous step success/failure
           run: exit 0
