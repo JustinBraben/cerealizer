@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run all tests in all modes.");
     const tests = b.addTest(.{
         .root_source_file = b.path("src/cerealizer.zig"),
+        .test_runner = b.path("test_runner.zig"),
         .target = target,
         .optimize = optimize,
     });
