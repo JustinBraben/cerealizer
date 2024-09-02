@@ -23,17 +23,21 @@ pub fn main() !void {
         const elapsed = std.time.milliTimestamp() - start;
 
         const name = extractName(t);
-        if (std.testing.allocator_instance.deinit() == .leak) {
-            try config.setColor(out, .red);
-            try std.fmt.format(out, "{s} leaked memory\n", .{name});
-        }
 
         if (result) |_| {
             try config.setColor(out, .green);
             try std.fmt.format(out, "{s} passed - ({d}ms)\n", .{name, elapsed});
+            try config.setColor(out, .bright_yellow);
         } else |err| {
             try config.setColor(out, .red);
             try std.fmt.format(out, "{s} failed - {}\n", .{name, err});
+            try config.setColor(out, .bright_yellow);
+        }
+
+        if (std.testing.allocator_instance.deinit() == .leak) {
+            try config.setColor(out, .red);
+            try std.fmt.format(out, "{s} leaked memory\n", .{name});
+            try config.setColor(out, .bright_yellow);
         }
     }
 }
