@@ -4,6 +4,7 @@ pub const Buffers = @import("buffers.zig");
 pub const ResizableOutputBuffer = Buffers.ResizableOutputBuffer;
 
 // pub const JsonSerializer = Serializer(.json);
+pub const JsonParser = @import("parser/json_parser.zig").JsonParser;
 
 pub const SerialType = enum {
     Json,

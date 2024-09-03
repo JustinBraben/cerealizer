@@ -37,4 +37,11 @@ pub fn main() !void {
     // for (person.hobbies) |hobby| {
     //     std.debug.print("Hobby: {s}\n", .{hobby});
     // }
+
+    const valid_simple_json = 
+        \\{ "name":"John Doe","age":20 }
+    ;
+
+    var parser = cerealizer.JsonParser.init(valid_simple_json);
+    try parser.parse();
 }
