@@ -39,9 +39,18 @@ pub fn main() !void {
     // }
 
     const valid_simple_json = 
-        \\{ "name":"John Doe","age":20 }
+        \\{
+        \\    "name": "John Doe",
+        \\    "age": 20,
+        \\    "hobbies": ["reading","swimming"]
+        \\}
     ;
 
-    var parser = cerealizer.JsonParser.init(valid_simple_json);
+    // const valid_simple_json = 
+    //     \\{"hobbies": [{},{}]}
+    // ;
+
+    var parser = cerealizer.JsonParser.init(valid_simple_json, allocator);
+    defer parser.deinit();
     try parser.parse();
 }
