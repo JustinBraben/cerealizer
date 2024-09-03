@@ -4,7 +4,7 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "zig build",
+            "command": "zig build examples",
             "group": "build",
             "problemMatcher": [
                 "$gcc"

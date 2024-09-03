@@ -301,6 +301,52 @@ test "simple json" {
         });
 }
 
+test "multiline json" {
+    const multiline_json = 
+        "{\"user\": \"johndoe\", \"admin\": false, \"uid\": 1000,\n" ++
+        "\"groups\": [\"users\", \"wheel\", \"audio\", \"video\"]}"
+    ;
+    try testTokenize(
+        multiline_json, 
+        &.{
+            .l_brace,
+            .string,
+            .colon,
+            .whitespace,
+            .string,
+            .comma,
+            .whitespace,
+            .string,
+            .colon,
+            .whitespace,
+            .keyword_false,
+            .comma,
+            .whitespace,
+            .string,
+            .colon,
+            .whitespace,
+            .number,
+            .comma,
+            .whitespace,
+            .string,
+            .colon,
+            .whitespace,
+            .l_bracket,
+            .string,
+            .comma,
+            .whitespace,
+            .string,
+            .comma,
+            .whitespace,
+            .string,
+            .comma,
+            .whitespace,
+            .string,
+            .r_bracket,
+            .r_brace,
+        });
+}
+
 test "whitespace json" {
     const json_string_whitespace = "{ \"name\": \"John\" }";
     try testTokenize(
