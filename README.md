@@ -8,7 +8,6 @@ Cerealizer is a serialization library for Zig, inspired by the YAS (Yet Another 
 - Support for basic Zig types
 - Extensible for custom types
 - Compact binary format
-- [Add more features as you implement them]
 
 ## Installation
 
@@ -17,8 +16,8 @@ To use Cerealizer in your Zig project, you can add it as a dependency in your `b
 ```zig
 .dependencies = .{
     .cerealizer = .{
-        .url = "https://github.com/yourusername/cerealizer/archive/v0.1.0.tar.gz",
-        .hash = "12345...", // Replace with the actual hash
+        .url = "https://github.com/JustinBraben/cerealizer/archive/df20948eaa944f923e5f8652cd4620a1f9eced31.tar.gz",
+        // Replace with the actual .hash, when building it will tell you what it expects
     },
 },
 ```
@@ -30,7 +29,7 @@ const cerealizer = b.dependency("cerealizer", .{
     .target = target,
     .optimize = optimize,
 });
-exe.addModule("cerealizer", cerealizer.module("cerealizer"));
+exe.root_module.addImport("cerealizer", cerealizer.module("cerealizer"));
 ```
 
 ## Usage
@@ -39,25 +38,32 @@ Here's a simple example of how to use Cerealizer:
 
 ```zig
 const std = @import("std");
-const Cerealizer = @import("cerealizer").Cerealizer;
+const Allocator = std.mem.Allocator;
+const cerealizer = @import("cerealizer");
+const log = std.log.scoped(.simple_example);
+
+const Person = struct {
+    name: []const u8,
+    age: u32,
+    hobbies: []const []const u8,
+};
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // Create a Cerealizer instance
-    var cerealizer = try Cerealizer.init(allocator);
-    defer cerealizer.deinit();
+    const person = Person{
+        .name = "Alice",
+        .age = 30,
+        .hobbies = &[_][]const u8{ "reading", "cycling" },
+    };
+    
+    var serialized = cerealizer.Serialize(person);
+    const json_string = try serialized.toOwnedString(allocator);
+    defer allocator.free(json_string);
 
-    // Serialize data
-    const original = @as(i32, 42);
-    try cerealizer.serialize(original);
-
-    // Deserialize data
-    const deserialized = try cerealizer.deserialize(i32);
-
-    std.debug.print("Original: {}, Deserialized: {}\n", .{ original, deserialized });
+    log.info("Serialized: {s}\n", .{json_string});
 }
 ```
 
@@ -80,7 +86,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Add benchmarking
 - [ ] Improve documentation
 - [ ] Add more examples
-- [ ] [Add more items as needed]
 
 ---
 
