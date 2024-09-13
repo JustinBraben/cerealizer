@@ -325,4 +325,8 @@ comptime {
     _ = @import("buffers.zig");
     _ = @import("tokenizer/json_tokenizer.zig");
     _ = @import("parser/json_parser.zig");
+
+    _ = @import("yas/yas.zig");
+    _ = @import("yas/flags.zig");
+    _ = @import("yas/claude_yas.zig");
 }

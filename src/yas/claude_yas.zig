@@ -63,42 +63,80 @@ pub fn save(allocator: Allocator, comptime input_flags: usize, yas_object: anyty
                 try buffer.append(':');
 
                 const value = @field(nested_value, inner_field.name);
-                _ = value;
-
-                // TODO: cast *const anyopaque to the type we want
-                // std.debug.print("\tname: {s}, type: {s}, value: {any}\n", .{inner_field.name, @typeName(inner_field.type), inner_field.default_value});
+                switch (@TypeOf(value)) {
+                    comptime_int, i32, i64, u16, u32, u64 => {
+                        const str = try std.fmt.allocPrint(allocator, "{d}", .{value});
+                        defer allocator.free(str);
+                        try buffer.appendSlice(str);
+                    },
+                    f32, f64 => {
+                        const str = try std.fmt.allocPrint(allocator, "{d}", .{value});
+                        defer allocator.free(str);
+                        try buffer.appendSlice(str);
+                    },
+                    else => @compileError("Unsupported type: " ++ @typeName(@TypeOf(value))),
+                }
             }
-            // try std.json.stringify(@field(yas_object.given_args, field.name), .{}, buffer);
         }
         try buffer.append('}');
+    } else if (flags.isBinaryArchive(input_flags)) {
+        @panic("Binary serialization not implemented yet");
+    } else {
+        @panic("Unsupported serialization format");
     }
-    // } else if (input_flags & binary != 0) {
-    //     @panic("Binary serialization not implemented yet");
-    // } else {
-    //     @panic("Unsupported serialization format");
-    // }
 
     return buffer;
 }
 
-pub fn load(allocator: Allocator, buf: []const u8, input_flags: usize, yas_object_nvp: anytype) !void {
-    if (input_flags & json != 0) {
-        var stream = std.json.TokenStream.init(buf);
-        const parsed = try std.json.parse(std.json.Value, &stream, .{.allocator = allocator});
-        defer std.json.parseFree(std.json.Value, parsed, .{.allocator = allocator});
+pub fn load(allocator: Allocator, buf: []const u8, comptime input_flags: usize, yas_object_nvp: anytype) !void {
+    if (flags.isJsonArchive(input_flags)) {
+        var parsed = try std.json.parseFromSlice(std.json.Value, allocator, buf, .{});
+        defer parsed.deinit();
 
-        if (parsed != .Object) return error.InvalidJson;
+        if (parsed.value != .object) return error.InvalidJson;
 
         inline for (std.meta.fields(@TypeOf(yas_object_nvp.given_args))) |field| {
-            const name = field.name;
-            const ptr = &@field(yas_object_nvp.given_args, name);
-            const value = parsed.Object.get(name) orelse return error.MissingField;
-            ptr.* = switch (@TypeOf(ptr.*)) {
-                u32 => @intCast(value.Integer),
-                u16 => @intCast(value.Integer),
-                f32 => @floatCast(value.Float),
-                else => @panic("Unsupported type"),
-            };
+            const nested_value = @field(yas_object_nvp.given_args, field.name);
+            inline for (std.meta.fields(@TypeOf(nested_value))) |inner_field| {
+                const name = inner_field.name;
+                const ptr = @field(nested_value, name);
+                const value = parsed.value.object.get(name) orelse return error.MissingField;
+
+                switch (value) {
+                    .integer => |i| {
+                        if (@TypeOf(ptr.*) == @TypeOf(i)) {
+                            // ptr.* = @as(@TypeOf(i), @intCast(i));
+                            @field(nested_value, name) = @as(@TypeOf(i), @intCast(i));
+                        }
+                    },
+                    .float => |f| {
+                        if (@TypeOf(ptr.*) == @TypeOf(f)) {
+                            // ptr.* = @as(@TypeOf(f), @floatCast(f));
+                            @field(nested_value, name) = @as(@TypeOf(f), @floatCast(f));
+                        }
+                    },
+                    else => {},
+                }
+
+                // switch (value) {
+                //     .integer => |i| std.debug.print("ptr_type: {s}, \tptr: {any}, \tvalue_type: {s}, value: {any}\n", .{@typeName(@TypeOf(ptr.*)), ptr, @typeName(@TypeOf(i)), i}),
+                //     .float => |f| std.debug.print("ptr_type: {s}, \tptr: {any}, \tvalue_type: {s}, value: {any}\n", .{@typeName(@TypeOf(ptr.*)), ptr, @typeName(@TypeOf(f)), f}),
+                //     else => {},
+                // }
+
+                // ptr.* = switch (value) {
+                //     .integer => |i| switch (@TypeOf(ptr.*)) {
+                //         u32 => @intCast(i),
+                //         u16 => @intCast(i),
+                //         else => @compileError("Unsupported integer type: " ++ @typeName(@TypeOf(ptr.*))),
+                //     },
+                //     .float => |f| switch (@TypeOf(ptr.*)) {
+                //         f32 => @floatCast(f),
+                //         else => @compileError("Unsupported float type: " ++ @typeName(@TypeOf(ptr.*))),
+                //     },
+                //     else => @compileError("Unsupported JSON value type for field: " ++ name),
+                // };
+            }
         }
     } else if (input_flags & binary != 0) {
         @panic("Binary deserialization not implemented yet");
@@ -155,27 +193,26 @@ test "mem json serialize test" {
     const c: f32 = 3.14;
     var cc: f32 = undefined;
 
-    _ = &aa;
-    _ = &bb;
-    _ = &cc;
-
     const input_flags: usize = mem | json;
 
     const yas_obj = YasObject("myobject", .{ .{.a = a}, .{.b = b}, .{.c = c} });
     var buf = try save(test_allocator, input_flags, yas_obj);
     defer buf.deinit();
 
-    try testing.expectEqualSlices(u8, "{\"a\":,\"b\":,\"c\":}", buf.data);
-
+    try testing.expectEqualStrings("{\"a\":3,\"b\":4,\"c\":3.14}", buf.data);
+    
     // std.debug.print("Serialized: {s}\n", .{buf.data});
 
-    // const yas_obj_nvp = YasObjectNVP(
-    //     "myobject",
-    //     .{ a = &aa, b = &bb, c = &cc }
-    // );
+    // std.debug.print("Before Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
+    const yas_obj_nvp = YasObjectNVP(
+        "myobject",
+        .{ .{.a = &aa}, .{.b = &bb}, .{.c = &cc} }
+    );
 
-    // try yas.load(allocator, buf.data, flags, yas_obj_nvp);
+    try load(test_allocator, buf.data, input_flags, yas_obj_nvp);
 
-    // std.debug.print("Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
-    // std.debug.assert(a == aa and b == bb and @abs(c - cc) < 0.0001);
+    std.debug.print("Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
+    // try testing.expectEqual(a, aa);
+    // try testing.expectEqual(b, bb);
+    // try testing.expectEqual(c, cc);
 }
