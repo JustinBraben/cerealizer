@@ -328,5 +328,4 @@ comptime {
 
     _ = @import("yas/yas.zig");
     _ = @import("yas/flags.zig");
-    _ = @import("yas/claude_yas.zig");
 }

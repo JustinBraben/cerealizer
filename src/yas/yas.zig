@@ -11,124 +11,137 @@ pub const mem = @intFromEnum(flags.options.mem);
 const ArgSetType = u32;
 const max_format_args = @typeInfo(ArgSetType).Int.bits;
 
-pub fn save(comptime input_flags: usize, yas_object: anytype) ![]const u8 {
-    const YasObjectType = @TypeOf(yas_object);
-    const yas_object_type_info = @typeInfo(YasObjectType);
-    if (yas_object_type_info != .Struct) {
-        @compileError("expected tuple or struct argument, found " ++ @typeName(YasObjectType));
-    }
-    const fields_info = yas_object_type_info.Struct.fields;
-    if (fields_info.len > max_format_args) {
-        @compileError("32 arguments max are supported per format call");
-    }
+pub fn Buffer(comptime T: type) type {
+    return struct {
+        data: []T,
+        allocator: Allocator,
 
-    if (flags.isJsonArchive(input_flags)){
-        var buffer: [40]u8 = undefined;
-        const buf = buffer[0..];
-
-        var name_list = std.ArrayList([]const u8).init(std.heap.page_allocator);
-        defer name_list.deinit();
-
-        var val_list = std.ArrayList([]u8).init(std.heap.page_allocator);
-        defer val_list.deinit();
-
-        inline for (yas_object_type_info.Struct.fields) |field| {
-            
-            const inner = @typeInfo(field.type);
-
-            switch (inner) {
-                .Struct => |inner_struct| {
-                    inline for (inner_struct.fields) |inner_field| {
-
-                        const inner_inner = @typeInfo(inner_field.type);
-
-                        switch (inner_inner) {
-                            .Struct => |inner_inner_struct| {
-                                inline for (inner_inner_struct.fields) |inner_inner_field| {
-                                    try name_list.append(inner_inner_field.name);
-                                }
-                            },
-                            else => {}
-                        }
-                    }
-                },
-                .Pointer => {},
-                else => {},
-            }
+        pub fn init(allocator: Allocator) !@This() {
+            return .{
+                .data = try allocator.alloc(T, 0),
+                .allocator = allocator,
+            };
         }
 
-        // const fmt: []const u8 = "{s} {s} {s}";
-        for (name_list.items) |item| {
-            std.debug.print("item: \"{s}\"\n", .{item});
-            // var fmt_buffer: [20]u8 = undefined;
-            // const fmt_buf = fmt_buffer[0..];
-            // _ = try std.fmt.bufPrint(fmt_buf, "\"{s}\"", .{yas_object.object_name});
-            // fmt = fmt ++ buf;
+        pub fn deinit(self: *@This()) void {
+            self.allocator.free(self.data);
         }
-        std.debug.print("fmt: \"{s}\" \"{s}\" \"{s}\"\n", .{name_list.items[0], name_list.items[1], name_list.items[2]});
 
+        pub fn append(self: *@This(), value: T) !void {
+            const new_data = try self.allocator.realloc(self.data, self.data.len + 1);
+            new_data[new_data.len - 1] = value;
+            self.data = new_data;
+        }
 
-        
-        // std.debug.print("yas_object.object_name = {s} \n", .{yas_object.object_name});
-        
-        _ = try std.fmt.bufPrint(buf, "{{\"{s}\"}}", .{yas_object.object_name});
-        return buf;
-    }
-    else {
-        var buffer: [40]u8 = undefined;
-        const buf = buffer[0..];
-        _ = try std.fmt.bufPrint(buf, "{{ \"{s}\" }}\n", .{"Oops, no flags set!"});
-        return buf;
-    }
-    
-    // std.debug.print("yas_obj:\n\tobject_name: {s},\n\tgiven_args: {} \n", .{yas_object.object_name, yas_object.given_args});
-    // std.debug.print("input_flags = {} \n", .{input_flags});
+        pub fn appendSlice(self: *@This(), slice: []const T) !void {
+            const new_len = self.data.len + slice.len;
+            const new_data = try self.allocator.realloc(self.data, new_len);
+            @memcpy(new_data[self.data.len..], slice);
+            self.data = new_data;
+        }
+    };
 }
 
-// pub fn saveNew(gpa: Allocator, input_flags: usize, yas_object: anytype)
+pub fn save(allocator: Allocator, comptime input_flags: usize, yas_object: anytype) !Buffer(u8) {
+    var buffer = try Buffer(u8).init(allocator);
+    errdefer buffer.deinit();
 
-pub fn debugYasObject(yas_object: anytype) void {
-    const YasObjectType = @TypeOf(yas_object);
-    const yas_object_type_info = @typeInfo(YasObjectType);
-    if (yas_object_type_info != .Struct) {
-        @compileError("expected tuple or struct argument, found " ++ @typeName(YasObjectType));
-    }
-    const fields_info = yas_object_type_info.Struct.fields;
-    if (fields_info.len > max_format_args) {
-        @compileError("32 arguments max are supported per format call");
-    }
+    if (flags.isJsonArchive(input_flags)) {
+        try buffer.append('{');
+        inline for (std.meta.fields(@TypeOf(yas_object.given_args)), 0..) |field, i| {
+            if (i > 0) try buffer.append(',');
 
-    std.debug.print("yas_object_type_info fields len: {}\n", .{yas_object_type_info.Struct.fields.len});
+            // std.debug.print("name: {s}, type: {s}\n", .{field.name, @typeName(field.type)});
 
-    inline for (yas_object_type_info.Struct.fields) |field| {
-        const inner = @typeInfo(field.type);
-        std.debug.print("\tname: {s}, type: {s}\n", .{field.name, @typeName(field.type)});
-        switch (inner) {
-            .Struct => |inner_struct| {
-                inline for (inner_struct.fields) |inner_field| {
-                    std.debug.print("\t\tname: {s}, type: {s}\n", .{inner_field.name, @typeName(inner_field.type)});
+            const nested_value = @field(yas_object.given_args, field.name);
+            inline for (std.meta.fields(@TypeOf(nested_value)), 0..) |inner_field, j| {
+                if (j > 0) try buffer.append(',');
+                //std.debug.print("\tname: {s}, type: {s}\n", .{inner_field.name, @typeName(inner_field.type)});
+                try buffer.append('"');
+                try buffer.appendSlice(inner_field.name);
+                try buffer.append('"');
+                try buffer.append(':');
 
-                    const inner_inner = @typeInfo(inner_field.type);
-
-                    switch (inner_inner) {
-                        .Struct => |inner_inner_struct| {
-                            inline for (inner_inner_struct.fields) |inner_inner_field| {
-                                std.debug.print("\t\t\tname: {s}, type: {s}\n", .{inner_inner_field.name, @typeName(inner_inner_field.type)});
-
-                                // var anyopaque_ptr = inner_inner_field.default_value.?;
-                                // const res_anyopaque = @constCast(anyopaque_ptr);
-                                // const res = @as([*]u8, @ptrCast(res_anyopaque));
-                                // std.debug.print("res: {any}\n", .{res[0..1]});
-                                // _ = &anyopaque_ptr;
-                            }
-                        },
-                        else => {}
-                    }
+                const value = @field(nested_value, inner_field.name);
+                switch (@TypeOf(value)) {
+                    comptime_int, i32, i64, u16, u32, u64 => {
+                        const str = try std.fmt.allocPrint(allocator, "{d}", .{value});
+                        defer allocator.free(str);
+                        try buffer.appendSlice(str);
+                    },
+                    f32, f64 => {
+                        const str = try std.fmt.allocPrint(allocator, "{d}", .{value});
+                        defer allocator.free(str);
+                        try buffer.appendSlice(str);
+                    },
+                    else => @compileError("Unsupported type: " ++ @typeName(@TypeOf(value))),
                 }
-            },
-            .Pointer => {},
-            else => {},
+            }
         }
+        try buffer.append('}');
+    } else if (flags.isBinaryArchive(input_flags)) {
+        @panic("Binary serialization not implemented yet");
+    } else {
+        @panic("Unsupported serialization format");
+    }
+
+    return buffer;
+}
+
+pub fn load(allocator: Allocator, buf: []const u8, comptime input_flags: usize, yas_object_nvp: anytype) !void {
+    if (flags.isJsonArchive(input_flags)) {
+        var parsed = try std.json.parseFromSlice(std.json.Value, allocator, buf, .{});
+        defer parsed.deinit();
+
+        if (parsed.value != .object) return error.InvalidJson;
+
+        inline for (std.meta.fields(@TypeOf(yas_object_nvp.given_args))) |field| {
+            const nested_value = @field(yas_object_nvp.given_args, field.name);
+            inline for (std.meta.fields(@TypeOf(nested_value))) |inner_field| {
+                const name = inner_field.name;
+                const ptr = @field(nested_value, name);
+                const value = parsed.value.object.get(name) orelse return error.MissingField;
+
+                switch (value) {
+                    .integer => |i| {
+                        if (@TypeOf(ptr.*) == @TypeOf(i)) {
+                            // ptr.* = @as(@TypeOf(i), @intCast(i));
+                            @field(nested_value, name) = @as(@TypeOf(i), @intCast(i));
+                        }
+                    },
+                    .float => |f| {
+                        if (@TypeOf(ptr.*) == @TypeOf(f)) {
+                            // ptr.* = @as(@TypeOf(f), @floatCast(f));
+                            @field(nested_value, name) = @as(@TypeOf(f), @floatCast(f));
+                        }
+                    },
+                    else => {},
+                }
+
+                // switch (value) {
+                //     .integer => |i| std.debug.print("ptr_type: {s}, \tptr: {any}, \tvalue_type: {s}, value: {any}\n", .{@typeName(@TypeOf(ptr.*)), ptr, @typeName(@TypeOf(i)), i}),
+                //     .float => |f| std.debug.print("ptr_type: {s}, \tptr: {any}, \tvalue_type: {s}, value: {any}\n", .{@typeName(@TypeOf(ptr.*)), ptr, @typeName(@TypeOf(f)), f}),
+                //     else => {},
+                // }
+
+                // ptr.* = switch (value) {
+                //     .integer => |i| switch (@TypeOf(ptr.*)) {
+                //         u32 => @intCast(i),
+                //         u16 => @intCast(i),
+                //         else => @compileError("Unsupported integer type: " ++ @typeName(@TypeOf(ptr.*))),
+                //     },
+                //     .float => |f| switch (@TypeOf(ptr.*)) {
+                //         f32 => @floatCast(f),
+                //         else => @compileError("Unsupported float type: " ++ @typeName(@TypeOf(ptr.*))),
+                //     },
+                //     else => @compileError("Unsupported JSON value type for field: " ++ name),
+                // };
+            }
+        }
+    } else if (input_flags & binary != 0) {
+        @panic("Binary deserialization not implemented yet");
+    } else {
+        @panic("Unsupported deserialization format");
     }
 }
 
@@ -156,19 +169,50 @@ fn YasObjectAux(comptime args: type) type {
     };
 }
 
-// test "yas save test" {
-//     const a: u32 = 3;
-//     const b: u16 = 4;
-//     const c: f32 = 3.14;
+pub fn YasObjectNVP(object_name: []const u8, args: anytype) YasObjectNVPAux(@TypeOf(args)) {
+    return .{
+        .object_name = object_name,
+        .given_args = args,
+    };
+}
 
-//     const input_flags: usize = mem | json;
+fn YasObjectNVPAux(comptime Args: type) type {
+    return struct {
+        object_name: []const u8,
+        given_args: Args,
+    };
+}
 
-//     const yas_obj = YasObject("myobject", .{a, b, c});
-//     var buf = try save(input_flags, yas_obj);
-//     _ = &buf;
+test "mem json serialize test" {
+    const test_allocator = std.testing.allocator;
 
-//     try testing.expectEqualStrings(
-//         "yas.yas.YasObjectAux(struct{comptime u32 = 3, comptime u16 = 4, comptime f32 = 3.140000104904175})", 
-//         @typeName(@TypeOf(yas_obj))
-//     );
-// }
+    const a: u32 = 3;
+    var aa: u32 = undefined;
+    const b: u16 = 4;
+    var bb: u16 = undefined;
+    const c: f32 = 3.14;
+    var cc: f32 = undefined;
+
+    const input_flags: usize = mem | json;
+
+    const yas_obj = YasObject("myobject", .{ .{.a = a}, .{.b = b}, .{.c = c} });
+    var buf = try save(test_allocator, input_flags, yas_obj);
+    defer buf.deinit();
+
+    try testing.expectEqualStrings("{\"a\":3,\"b\":4,\"c\":3.14}", buf.data);
+    
+    // std.debug.print("Serialized: {s}\n", .{buf.data});
+
+    // std.debug.print("Before Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
+    const yas_obj_nvp = YasObjectNVP(
+        "myobject",
+        .{ .{.a = &aa}, .{.b = &bb}, .{.c = &cc} }
+    );
+
+    try load(test_allocator, buf.data, input_flags, yas_obj_nvp);
+
+    std.debug.print("Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
+    // try testing.expectEqual(a, aa);
+    // try testing.expectEqual(b, bb);
+    // try testing.expectEqual(c, cc);
+}
