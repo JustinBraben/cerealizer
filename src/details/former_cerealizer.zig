@@ -320,6 +320,10 @@ fn DeserializeInterface(comptime T: type) type {
 
 // Runs tests found in these imports
 comptime {
+    _ = @import("buffers.zig");
+    _ = @import("tokenizer/json_tokenizer.zig");
+    _ = @import("parser/json_parser.zig");
+
     _ = @import("yas/yas.zig");
     _ = @import("yas/flags.zig");
 }

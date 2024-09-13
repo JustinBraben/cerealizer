@@ -1,19 +1,17 @@
 const std = @import("std");
 const testing = std.testing;
 
-// pub const mem: usize = @as(usize, @intCast(std.math.maxInt(u8))) + 1;
-
 pub const options = enum(usize) {
-    binary      = 1 << 0,
-    text        = 1 << 1,
-    json        = 1 << 2,
-    no_header   = 1 << 3,
-    elittle     = 1 << 4,
-    ebig        = 1 << 5,
-    ehost       = 1 << 6,
-    compacted   = 1 << 7,
-    mem         = 1 << 8,
-    file        = 1 << 9,
+    binary = 1 << 0,
+    text = 1 << 1,
+    json = 1 << 2,
+    no_header = 1 << 3,
+    elittle = 1 << 4,
+    ebig = 1 << 5,
+    ehost = 1 << 6,
+    compacted = 1 << 7,
+    mem = 1 << 8,
+    file = 1 << 9,
 };
 
 pub fn isBinaryArchive(comptime input: usize) bool {
@@ -92,12 +90,7 @@ test "file archive test" {
 }
 
 test "isEnum test" {
-    const BloodType = enum {
-        A,
-        B,
-        AB,
-        O
-    };
+    const BloodType = enum { A, B, AB, O };
 
     try testing.expectEqual(true, isEnum(BloodType));
 }
