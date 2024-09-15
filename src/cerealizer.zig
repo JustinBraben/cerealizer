@@ -1,4 +1,5 @@
 const std = @import("std");
+const testing = std.testing;
 const Allocator = std.mem.Allocator;
 pub const yas = @import("yas/yas.zig");
 
@@ -20,6 +21,44 @@ pub fn Cerializer(comptime input_flags: usize) type {
                     .allocator = allocator,
                     .buf = string,
                 };
+            }
+
+            if (yas.flags.isBinaryArchive(input_flags)) {
+                var binary = std.ArrayList(u8).init(allocator);
+                errdefer binary.deinit();
+
+                const ValueType = @TypeOf(value);
+
+                // switch (@typeInfo(ValueType)) {
+                //     .Struct => |captured_struct| {
+                //         switch (captured_struct.layout) {
+                //             .Extern => {
+                //                 // const val = ValueType{ .lat = 40.2, .long = -74.2 };
+                //                 // const val_to_bits: ValueType = @bitCast(val);
+
+                //                 // std.debug.print("val_to_bits: {any}\n", .{val_to_bits});
+                //             },
+                //             else => {}
+                //         }
+                //     },
+                //     else => {std.debug.print("Unsupported Binary\n", .{});}
+                // }
+
+                switch (@typeInfo(ValueType)) {
+                    .Struct => |captured_struct| {
+                        if (captured_struct.layout == .@"packed") {
+                            std.debug.print("captured_struct.layout: {}\n", .{captured_struct.layout});
+                        }
+                    },
+                    else => std.debug.print("Unsupported Binary\n", .{}),
+                }
+
+                // if (std.meta.containerLayout(ValueType) == .Packed) {
+                //     const val = ValueType{ .lat = 40.2, .long = -74.2 };
+                //     const val_to_bits: ValueType = @bitCast(val);
+
+                //     std.debug.print("val_to_bits: {any}\n", .{val_to_bits});
+                // }
             }
 
             return Self{
@@ -68,6 +107,83 @@ pub fn Decerealizer(comptime T: type, comptime input_flags: usize) type {
             self.parsed_output.deinit();
         }
     };
+}
+
+test "cerealizer test" {
+    const Place = struct { lat: f32, long: f32 };
+    const ally = std.heap.page_allocator;
+
+    const x = Place{
+        .lat = 51.997664,
+        .long = -0.740687,
+    };
+
+    const input_flags = yas.mem | yas.json;
+
+    var serializer = try Cerializer(input_flags).init(ally, x);
+    defer serializer.deinit();
+
+    try testing.expect(
+        std.mem.eql(
+            u8, 
+            serializer.buf.items, 
+            "{\"lat\":5.199766540527344e1,\"long\":-7.406870126724243e-1}"
+        )
+    );
+
+    const input_slice = 
+        \\{ "lat": 40.684540, "long": -74.401422 }
+    ;
+    const expected = Place{
+        .lat = 40.684540,
+        .long = -74.401422,
+    };
+
+    var deserializer = try Decerealizer(Place, input_flags).init(ally, input_slice);
+    defer deserializer.deinit();
+    const place = deserializer.parsed_output.value;
+
+    try testing.expectEqualDeep(expected, place);
+}
+
+test "cerealizer packed test" {
+    const Place = packed struct { lat: f32, long: f32 };
+    const ally = std.heap.page_allocator;
+
+    const x = Place{
+        .lat = 51.997664,
+        .long = -0.740687,
+    };
+
+    const input_flags = yas.mem | yas.binary;
+
+    var serializer = try Cerializer(input_flags).init(ally, x);
+    defer serializer.deinit();
+
+    std.debug.print("{any}\n", .{serializer.buf.items});
+    // try testing.expect(
+    //     std.mem.eql(
+    //         u8, 
+    //         serializer.buf.items, 
+    //         "{\"lat\":5.199766540527344e1,\"long\":-7.406870126724243e-1}"
+    //     )
+    // );
+
+    // const input_slice = 
+    //     \\{ "lat": 40.684540, "long": -74.401422 }
+    // ;
+    // const expected = Place{
+    //     .lat = 40.684540,
+    //     .long = -74.401422,
+    // };
+
+    // var deserializer = try Decerealizer(Place, input_flags).init(ally, input_slice);
+    // defer deserializer.deinit();
+    // const place = deserializer.parsed_output.value;
+
+    // std.debug.print("expected: {any}\n", .{expected});
+    // std.debug.print("actual: {any}\n", .{place});
+    // try testing.expectEqualDeep(expected, place);
 }
 
 // Runs tests found in these imports
