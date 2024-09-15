@@ -117,25 +117,6 @@ pub fn load(allocator: Allocator, buf: []const u8, comptime input_flags: usize, 
                     },
                     else => {},
                 }
-
-                // switch (value) {
-                //     .integer => |i| std.debug.print("ptr_type: {s}, \tptr: {any}, \tvalue_type: {s}, value: {any}\n", .{@typeName(@TypeOf(ptr.*)), ptr, @typeName(@TypeOf(i)), i}),
-                //     .float => |f| std.debug.print("ptr_type: {s}, \tptr: {any}, \tvalue_type: {s}, value: {any}\n", .{@typeName(@TypeOf(ptr.*)), ptr, @typeName(@TypeOf(f)), f}),
-                //     else => {},
-                // }
-
-                // ptr.* = switch (value) {
-                //     .integer => |i| switch (@TypeOf(ptr.*)) {
-                //         u32 => @intCast(i),
-                //         u16 => @intCast(i),
-                //         else => @compileError("Unsupported integer type: " ++ @typeName(@TypeOf(ptr.*))),
-                //     },
-                //     .float => |f| switch (@TypeOf(ptr.*)) {
-                //         f32 => @floatCast(f),
-                //         else => @compileError("Unsupported float type: " ++ @typeName(@TypeOf(ptr.*))),
-                //     },
-                //     else => @compileError("Unsupported JSON value type for field: " ++ name),
-                // };
             }
         }
     } else if (input_flags & binary != 0) {
