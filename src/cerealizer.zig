@@ -29,36 +29,21 @@ pub fn Cerializer(comptime input_flags: usize) type {
 
                 const ValueType = @TypeOf(value);
 
-                // switch (@typeInfo(ValueType)) {
-                //     .Struct => |captured_struct| {
-                //         switch (captured_struct.layout) {
-                //             .Extern => {
-                //                 // const val = ValueType{ .lat = 40.2, .long = -74.2 };
-                //                 // const val_to_bits: ValueType = @bitCast(val);
-
-                //                 // std.debug.print("val_to_bits: {any}\n", .{val_to_bits});
-                //             },
-                //             else => {}
-                //         }
-                //     },
-                //     else => {std.debug.print("Unsupported Binary\n", .{});}
-                // }
-
                 switch (@typeInfo(ValueType)) {
                     .Struct => |captured_struct| {
-                        if (captured_struct.layout == .@"packed") {
-                            std.debug.print("captured_struct.layout: {}\n", .{captured_struct.layout});
+                        switch (captured_struct.layout) {
+                            .auto => {},
+                            .@"extern" => {},
+                            .@"packed" => {
+                                std.debug.print("captured_struct.layout: {}\n", .{captured_struct.layout});
+                                const val = ValueType{ .lat = 40.2, .long = -74.2 };
+                                const val_to_bits: ValueType = @bitCast(val);
+                                std.debug.print("val_to_bits: {}\n", .{val_to_bits});
+                            },
                         }
                     },
                     else => std.debug.print("Unsupported Binary\n", .{}),
                 }
-
-                // if (std.meta.containerLayout(ValueType) == .Packed) {
-                //     const val = ValueType{ .lat = 40.2, .long = -74.2 };
-                //     const val_to_bits: ValueType = @bitCast(val);
-
-                //     std.debug.print("val_to_bits: {any}\n", .{val_to_bits});
-                // }
             }
 
             return Self{
