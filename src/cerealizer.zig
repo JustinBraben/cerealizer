@@ -35,10 +35,10 @@ pub fn Cerializer(comptime input_flags: usize) type {
                             .auto => {},
                             .@"extern" => {},
                             .@"packed" => {
-                                std.debug.print("captured_struct.layout: {}\n", .{captured_struct.layout});
-                                const val = ValueType{ .lat = 40.2, .long = -74.2 };
-                                const val_to_bits: ValueType = @bitCast(val);
-                                std.debug.print("val_to_bits: {}\n", .{val_to_bits});
+                                // std.debug.print("captured_struct.layout: {}\n", .{captured_struct.layout});
+                                // const val = ValueType{ .lat = 40.2, .long = -74.2 };
+                                // const val_to_bits: ValueType = @bitCast(val);
+                                // std.debug.print("val_to_bits: {}\n", .{val_to_bits});
                             },
                         }
                     },
@@ -145,30 +145,7 @@ test "cerealizer packed test" {
     var serializer = try Cerializer(input_flags).init(ally, x);
     defer serializer.deinit();
 
-    std.debug.print("{any}\n", .{serializer.buf.items});
-    // try testing.expect(
-    //     std.mem.eql(
-    //         u8, 
-    //         serializer.buf.items, 
-    //         "{\"lat\":5.199766540527344e1,\"long\":-7.406870126724243e-1}"
-    //     )
-    // );
-
-    // const input_slice = 
-    //     \\{ "lat": 40.684540, "long": -74.401422 }
-    // ;
-    // const expected = Place{
-    //     .lat = 40.684540,
-    //     .long = -74.401422,
-    // };
-
-    // var deserializer = try Decerealizer(Place, input_flags).init(ally, input_slice);
-    // defer deserializer.deinit();
-    // const place = deserializer.parsed_output.value;
-
-    // std.debug.print("expected: {any}\n", .{expected});
-    // std.debug.print("actual: {any}\n", .{place});
-    // try testing.expectEqualDeep(expected, place);
+    // std.debug.print("{any}\n", .{serializer.buf.items});
 }
 
 // Runs tests found in these imports

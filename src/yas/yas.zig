@@ -186,7 +186,7 @@ test "mem json serialize test" {
 
     try load(test_allocator, buf.data, input_flags, yas_obj_nvp);
 
-    std.debug.print("Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
+    // std.debug.print("Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
     // try testing.expectEqual(a, aa);
     // try testing.expectEqual(b, bb);
     // try testing.expectEqual(c, cc);
