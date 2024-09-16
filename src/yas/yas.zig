@@ -117,25 +117,6 @@ pub fn load(allocator: Allocator, buf: []const u8, comptime input_flags: usize, 
                     },
                     else => {},
                 }
-
-                // switch (value) {
-                //     .integer => |i| std.debug.print("ptr_type: {s}, \tptr: {any}, \tvalue_type: {s}, value: {any}\n", .{@typeName(@TypeOf(ptr.*)), ptr, @typeName(@TypeOf(i)), i}),
-                //     .float => |f| std.debug.print("ptr_type: {s}, \tptr: {any}, \tvalue_type: {s}, value: {any}\n", .{@typeName(@TypeOf(ptr.*)), ptr, @typeName(@TypeOf(f)), f}),
-                //     else => {},
-                // }
-
-                // ptr.* = switch (value) {
-                //     .integer => |i| switch (@TypeOf(ptr.*)) {
-                //         u32 => @intCast(i),
-                //         u16 => @intCast(i),
-                //         else => @compileError("Unsupported integer type: " ++ @typeName(@TypeOf(ptr.*))),
-                //     },
-                //     .float => |f| switch (@TypeOf(ptr.*)) {
-                //         f32 => @floatCast(f),
-                //         else => @compileError("Unsupported float type: " ++ @typeName(@TypeOf(ptr.*))),
-                //     },
-                //     else => @compileError("Unsupported JSON value type for field: " ++ name),
-                // };
             }
         }
     } else if (input_flags & binary != 0) {
@@ -146,10 +127,7 @@ pub fn load(allocator: Allocator, buf: []const u8, comptime input_flags: usize, 
 }
 
 pub fn YasObject(object_name: []const u8, args: anytype) YasObjectAux(@TypeOf(args)) {
-    return .{
-        .object_name = object_name,
-        .given_args = args
-    };
+    return .{ .object_name = object_name, .given_args = args };
 }
 
 fn YasObjectAux(comptime args: type) type {
@@ -165,7 +143,7 @@ fn YasObjectAux(comptime args: type) type {
 
     return struct {
         object_name: []const u8,
-        given_args: args, 
+        given_args: args,
     };
 }
 
@@ -195,23 +173,20 @@ test "mem json serialize test" {
 
     const input_flags: usize = mem | json;
 
-    const yas_obj = YasObject("myobject", .{ .{.a = a}, .{.b = b}, .{.c = c} });
+    const yas_obj = YasObject("myobject", .{ .{ .a = a }, .{ .b = b }, .{ .c = c } });
     var buf = try save(test_allocator, input_flags, yas_obj);
     defer buf.deinit();
 
     try testing.expectEqualStrings("{\"a\":3,\"b\":4,\"c\":3.14}", buf.data);
-    
+
     // std.debug.print("Serialized: {s}\n", .{buf.data});
 
     // std.debug.print("Before Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
-    const yas_obj_nvp = YasObjectNVP(
-        "myobject",
-        .{ .{.a = &aa}, .{.b = &bb}, .{.c = &cc} }
-    );
+    const yas_obj_nvp = YasObjectNVP("myobject", .{ .{ .a = &aa }, .{ .b = &bb }, .{ .c = &cc } });
 
     try load(test_allocator, buf.data, input_flags, yas_obj_nvp);
 
-    std.debug.print("Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
+    // std.debug.print("Deserialized: a = {}, b = {}, c = {d}\n", .{ aa, bb, cc });
     // try testing.expectEqual(a, aa);
     // try testing.expectEqual(b, bb);
     // try testing.expectEqual(c, cc);
