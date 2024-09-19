@@ -24,7 +24,8 @@ pub fn main() !void {
     };
     const options = SerializeOptionsMaskFlags{
         .mem = true,
-        .json = true,
+        .binary = true,
+        .little_endian = true,
     };
 
     try serialize(data.writer(), Place, place_1, options);

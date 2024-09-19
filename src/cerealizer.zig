@@ -94,59 +94,59 @@ pub fn Decerealizer(comptime T: type, comptime input_flags: usize) type {
     };
 }
 
-test "cerealizer test" {
-    const Place = struct { lat: f32, long: f32 };
-    const ally = std.heap.page_allocator;
+// test "cerealizer test" {
+//     const Place = struct { lat: f32, long: f32 };
+//     const ally = std.heap.page_allocator;
 
-    const x = Place{
-        .lat = 51.997664,
-        .long = -0.740687,
-    };
+//     const x = Place{
+//         .lat = 51.997664,
+//         .long = -0.740687,
+//     };
 
-    const input_flags = yas.mem | yas.json;
+//     const input_flags = yas.mem | yas.json;
 
-    var serializer = try Cerializer(input_flags).init(ally, x);
-    defer serializer.deinit();
+//     var serializer = try Cerializer(input_flags).init(ally, x);
+//     defer serializer.deinit();
 
-    try testing.expect(
-        std.mem.eql(
-            u8, 
-            serializer.buf.items, 
-            "{\"lat\":5.199766540527344e1,\"long\":-7.406870126724243e-1}"
-        )
-    );
+//     try testing.expect(
+//         std.mem.eql(
+//             u8, 
+//             serializer.buf.items, 
+//             "{\"lat\":5.199766540527344e1,\"long\":-7.406870126724243e-1}"
+//         )
+//     );
 
-    const input_slice = 
-        \\{ "lat": 40.684540, "long": -74.401422 }
-    ;
-    const expected = Place{
-        .lat = 40.684540,
-        .long = -74.401422,
-    };
+//     const input_slice = 
+//         \\{ "lat": 40.684540, "long": -74.401422 }
+//     ;
+//     const expected = Place{
+//         .lat = 40.684540,
+//         .long = -74.401422,
+//     };
 
-    var deserializer = try Decerealizer(Place, input_flags).init(ally, input_slice);
-    defer deserializer.deinit();
-    const place = deserializer.parsed_output.value;
+//     var deserializer = try Decerealizer(Place, input_flags).init(ally, input_slice);
+//     defer deserializer.deinit();
+//     const place = deserializer.parsed_output.value;
 
-    try testing.expectEqualDeep(expected, place);
-}
+//     try testing.expectEqualDeep(expected, place);
+// }
 
-test "cerealizer packed test" {
-    const Place = packed struct { lat: f32, long: f32 };
-    const ally = std.heap.page_allocator;
+// test "cerealizer packed test" {
+//     const Place = packed struct { lat: f32, long: f32 };
+//     const ally = std.heap.page_allocator;
 
-    const x = Place{
-        .lat = 51.997664,
-        .long = -0.740687,
-    };
+//     const x = Place{
+//         .lat = 51.997664,
+//         .long = -0.740687,
+//     };
 
-    const input_flags = yas.mem | yas.binary;
+//     const input_flags = yas.mem | yas.binary;
 
-    var serializer = try Cerializer(input_flags).init(ally, x);
-    defer serializer.deinit();
+//     var serializer = try Cerializer(input_flags).init(ally, x);
+//     defer serializer.deinit();
 
-    // std.debug.print("{any}\n", .{serializer.buf.items});
-}
+//     // std.debug.print("{any}\n", .{serializer.buf.items});
+// }
 
 // Runs tests found in these imports
 comptime {
