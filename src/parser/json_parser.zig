@@ -86,12 +86,12 @@ pub const JsonParser = struct {
                 },
                 else => {
                     return JsonParseError.UnexpectedToken;
-                }
+                },
             }
         }
     }
 
-    pub fn parseObject(self: *JsonParser) JsonParseError!JsonValue  {
+    pub fn parseObject(self: *JsonParser) JsonParseError!JsonValue {
         var hash_map = std.StringArrayHashMap(JsonValue).init(self.allocator);
         errdefer {
             for (hash_map.keys()) |key| {
@@ -150,12 +150,11 @@ pub const JsonParser = struct {
                         colon_allowed = true;
                         comma_allowed = false;
                         comma_expected = false;
-                    }
-                    else {
+                    } else {
                         colon_allowed = false;
                         comma_allowed = true;
                         comma_expected = true;
-                    } 
+                    }
                 },
                 .number => {
                     if (!value_allowed) return JsonParseError.UnexpectedNumber;
@@ -193,7 +192,7 @@ pub const JsonParser = struct {
         return JsonValue{ .Object = hash_map };
     }
 
-    pub fn parseArray(self: *JsonParser) JsonParseError!JsonValue  {
+    pub fn parseArray(self: *JsonParser) JsonParseError!JsonValue {
         var array = std.ArrayList(JsonValue).init(self.allocator);
         errdefer {
             for (array.items) |*item| {
@@ -258,7 +257,7 @@ pub const JsonParser = struct {
                 },
                 else => {
                     // Unhandled
-                }
+                },
             }
         }
 
@@ -268,7 +267,7 @@ pub const JsonParser = struct {
 
 test "valid simple json" {
     const test_allocator = std.testing.allocator;
-    const valid_simple_json = 
+    const valid_simple_json =
         \\{ 
         \\  "name": "John Doe",
         \\  "age": 20 
@@ -282,7 +281,7 @@ test "valid simple json" {
 
 test "valid multiline simple json" {
     const test_allocator = std.testing.allocator;
-    const valid_simple_json = 
+    const valid_simple_json =
         \\{
         \\    "name": "John Doe",
         \\    "age": 20,
@@ -297,7 +296,7 @@ test "valid multiline simple json" {
 
 test "valid json" {
     const test_allocator = std.testing.allocator;
-    const valid_json = 
+    const valid_json =
         \\{
         \\  "name": "John Doe",
         \\  "age": 30,
@@ -314,7 +313,7 @@ test "valid json" {
     try std.testing.expect(@TypeOf(res) == void);
     parser.deinit();
 
-    // const valid_json_2 = 
+    // const valid_json_2 =
     // \\{
     // \\  "obj": {
     // \\      "name": "Bob"
@@ -329,7 +328,7 @@ test "valid json" {
 
 // test "invalid json" {
 //     const test_allocator = std.testing.allocator;
-//     const invalid_json = 
+//     const invalid_json =
 //         \\{
 //         \\  "name": "John Doe"
 //         \\  "age": 30,

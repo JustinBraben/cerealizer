@@ -82,7 +82,7 @@ fn computeTypeHashInternal(hasher: *TypeHashFn, comptime T: type) void {
             hasher.update(&intToLittleEndianBytes(@as(u64, arr.len)));
             computeTypeHashInternal(hasher, arr.child);
         },
-        .@"Struct" => |str| {
+        .Struct => |str| {
             // we can safely ignore the struct layout here as we will serialize the data by field order,
             // instead of memory representation
 
@@ -114,7 +114,7 @@ fn computeTypeHashInternal(hasher: *TypeHashFn, comptime T: type) void {
                 hasher.update(name);
             }
         },
-        .@"Enum" => |list| {
+        .Enum => |list| {
             const Tag = if (list.tag_type == usize)
                 u64
             else if (list.tag_type == isize)
@@ -137,7 +137,7 @@ fn computeTypeHashInternal(hasher: *TypeHashFn, comptime T: type) void {
                 computeTypeHashInternal(hasher, Tag);
             }
         },
-        .@"Union" => |un| {
+        .Union => |un| {
             const tag = un.tag_type orelse @compileError("Untagged unions are not supported!");
             hasher.update("union");
             computeTypeHashInternal(hasher, tag);
@@ -158,10 +158,10 @@ fn computeTypeHashInternal(hasher: *TypeHashFn, comptime T: type) void {
         .ComptimeInt,
         .Undefined,
         .Null,
-        .@"Fn",
-        .@"Opaque",
+        .Fn,
+        .Opaque,
         .Frame,
-        .@"AnyFrame",
+        .AnyFrame,
         .EnumLiteral,
         => @compileError("Unsupported type " ++ @typeName(T)),
     }

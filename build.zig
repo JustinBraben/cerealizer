@@ -1,11 +1,11 @@
 const std = @import("std");
 
-const examples = [_][]const u8 {
+const examples = [_][]const u8{
     // "simple_deserialize",
     // "simple",
     // "std_lib",
     "yas_mem_binary",
-    "yas_mem_json"
+    "yas_mem_json",
 };
 
 pub fn build(b: *std.Build) void {

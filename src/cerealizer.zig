@@ -11,7 +11,6 @@ pub fn Cerializer(comptime input_flags: usize) type {
         buf: std.ArrayList(u8),
 
         pub fn init(allocator: Allocator, value: anytype) !Self {
-
             if (yas.flags.isJsonArchive(input_flags)) {
                 var string = std.ArrayList(u8).init(allocator);
                 errdefer string.deinit();
@@ -66,7 +65,6 @@ pub fn Decerealizer(comptime T: type, comptime input_flags: usize) type {
         parsed_output: std.json.Parsed(T),
 
         pub fn init(allocator: Allocator, slice: []const u8) !Self {
-
             if (yas.flags.isJsonArchive(input_flags)) {
                 const parsed = try std.json.parseFromSlice(
                     T,
@@ -110,13 +108,13 @@ pub fn Decerealizer(comptime T: type, comptime input_flags: usize) type {
 
 //     try testing.expect(
 //         std.mem.eql(
-//             u8, 
-//             serializer.buf.items, 
+//             u8,
+//             serializer.buf.items,
 //             "{\"lat\":5.199766540527344e1,\"long\":-7.406870126724243e-1}"
 //         )
 //     );
 
-//     const input_slice = 
+//     const input_slice =
 //         \\{ "lat": 40.684540, "long": -74.401422 }
 //     ;
 //     const expected = Place{

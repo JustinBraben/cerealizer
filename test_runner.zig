@@ -26,11 +26,11 @@ pub fn main() !void {
 
         if (result) |_| {
             try config.setColor(out, .green);
-            try std.fmt.format(out, "{s} passed - ({d}ms)\n", .{name, elapsed});
+            try std.fmt.format(out, "{s} passed - ({d}ms)\n", .{ name, elapsed });
             try config.setColor(out, .bright_yellow);
         } else |err| {
             try config.setColor(out, .red);
-            try std.fmt.format(out, "{s} failed - {}\n", .{name, err});
+            try std.fmt.format(out, "{s} failed - {}\n", .{ name, err });
             try config.setColor(out, .bright_yellow);
         }
 
@@ -44,5 +44,5 @@ pub fn main() !void {
 
 fn extractName(t: std.builtin.TestFn) []const u8 {
     const marker = std.mem.lastIndexOf(u8, t.name, ".test.") orelse return t.name;
-    return t.name[marker+6..];
+    return t.name[marker + 6 ..];
 }

@@ -14,7 +14,7 @@ const SerializeOptionsMaskFlags = cerealizer.yas.SerializeOptionsMaskFlags;
 const Place = struct { lat: f32, long: f32 };
 
 pub fn main() !void {
-   const ally = std.heap.page_allocator;
+    const ally = std.heap.page_allocator;
     var data = std.ArrayList(u8).init(ally);
     defer data.deinit();
 

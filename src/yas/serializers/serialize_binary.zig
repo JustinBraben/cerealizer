@@ -6,7 +6,7 @@ const SerializeOptionsMaskFlags = @import("../flags.zig").SerializeOptionsMaskFl
 
 pub fn serializeRecursiveBinary(stream: anytype, comptime T: type, value: T, options: SerializeOptionsMaskFlags) @TypeOf(stream).Error!void {
     const endian = if (options.big_endian) std.builtin.Endian.big else std.builtin.Endian.little;
-    
+
     switch (@typeInfo(T)) {
         // Primitive types:
         .Void => {}, // no data
@@ -56,7 +56,7 @@ pub fn serializeRecursiveBinary(stream: anytype, comptime T: type, value: T, opt
             }
             if (arr.sentinel != null) @compileError("Sentinels are not supported yet!");
         },
-        .@"Struct" => |str| {
+        .Struct => |str| {
             // we can safely ignore the struct layout here as we will serialize the data by field order,
             // instead of memory representation
 
@@ -93,11 +93,11 @@ pub fn serializeRecursiveBinary(stream: anytype, comptime T: type, value: T, opt
 
             try stream.writeInt(u16, index, endian);
         },
-        .@"Enum" => |list| {
+        .Enum => |list| {
             const Tag = if (list.tag_type == usize) u64 else list.tag_type;
             try stream.writeInt(Utils.AlignedInt(Tag), @intFromEnum(value), endian);
         },
-        .@"Union" => |un| {
+        .Union => |un| {
             const Tag = un.tag_type orelse @compileError("Untagged unions are not supported!");
 
             const active_tag = std.meta.activeTag(value);
@@ -122,10 +122,10 @@ pub fn serializeRecursiveBinary(stream: anytype, comptime T: type, value: T, opt
         .ComptimeInt,
         .Undefined,
         .Null,
-        .@"Fn",
-        .@"Opaque",
+        .Fn,
+        .Opaque,
         .Frame,
-        .@"AnyFrame",
+        .AnyFrame,
         .EnumLiteral,
         => unreachable,
     }

@@ -111,7 +111,7 @@ pub const OutputBuffer = struct {
         assert(self.current_index <= self.end_index);
         return self.end_index - self.current_index;
     }
-    
+
     pub fn clear(self: *Self) void {
         self.current_index = 0;
     }
@@ -270,7 +270,7 @@ test "ResizableOutputBuffer basic functionality" {
     try testing.expectEqual(@as(u8, 1), buffer.data[0]);
     try testing.expectEqual(@as(u8, 42), buffer.data[1]);
     try testing.expectEqual(@as(u32, 0x12345678), @as(u32, @bitCast(buffer.data[2..6].*)));
-    
+
     // Only compare the exact number of bytes written
     try testing.expectEqualSlices(u8, "Hello", buffer.data[6..11]);
 

@@ -39,14 +39,7 @@ pub const JsonToken = struct {
 
         pub fn lexeme(tag: Tag) ?[]const u8 {
             return switch (tag) {
-                .invalid,
-                .identifier,
-                .string,
-                .number,
-                .keyword,
-                .whitespace,
-                .eof
-                => null,
+                .invalid, .identifier, .string, .number, .keyword, .whitespace, .eof => null,
 
                 .l_bracket => "[",
                 .r_bracket => "]",
@@ -87,19 +80,7 @@ pub const JsonTokenizer = struct {
         };
     }
 
-    const State = enum {
-        start,
-        identifier,
-        string,
-        int,
-        int_exponent,
-        int_period,
-        float,
-        float_exponent,
-        keyword,
-        whitespace,
-        invalid
-    };
+    const State = enum { start, identifier, string, int, int_exponent, int_period, float, float_exponent, keyword, whitespace, invalid };
 
     pub fn next(self: *JsonTokenizer) JsonToken {
         var state: State = .start;
@@ -180,7 +161,7 @@ pub const JsonTokenizer = struct {
                     },
                     else => {
                         state = .invalid;
-                    }
+                    },
                 },
 
                 .invalid => switch (c) {
@@ -262,9 +243,7 @@ pub const JsonTokenizer = struct {
                     },
                 },
 
-                else => {
-
-                }
+                else => {},
             }
         }
 
@@ -290,157 +269,77 @@ fn testTokenize(source: [:0]const u8, expected_token_tags: []const JsonToken.Tag
 
 test "simple json" {
     const json_string = "{\"name\":\"John\"}";
-    try testTokenize(
-        json_string, 
-        &.{
-            .l_brace,
-            .string,
-            .colon,
-            .string,
-            .r_brace
-        });
+    try testTokenize(json_string, &.{ .l_brace, .string, .colon, .string, .r_brace });
 }
 
 test "multiline json" {
-    const multiline_json = 
+    const multiline_json =
         "{\"user\": \"johndoe\", \"admin\": false, \"uid\": 1000,\n" ++
-        "\"groups\": [\"users\", \"wheel\", \"audio\", \"video\"]}"
-    ;
-    try testTokenize(
-        multiline_json, 
-        &.{
-            .l_brace,
-            .string,
-            .colon,
-            .whitespace,
-            .string,
-            .comma,
-            .whitespace,
-            .string,
-            .colon,
-            .whitespace,
-            .keyword_false,
-            .comma,
-            .whitespace,
-            .string,
-            .colon,
-            .whitespace,
-            .number,
-            .comma,
-            .whitespace,
-            .string,
-            .colon,
-            .whitespace,
-            .l_bracket,
-            .string,
-            .comma,
-            .whitespace,
-            .string,
-            .comma,
-            .whitespace,
-            .string,
-            .comma,
-            .whitespace,
-            .string,
-            .r_bracket,
-            .r_brace,
-        });
+        "\"groups\": [\"users\", \"wheel\", \"audio\", \"video\"]}";
+    try testTokenize(multiline_json, &.{
+        .l_brace,
+        .string,
+        .colon,
+        .whitespace,
+        .string,
+        .comma,
+        .whitespace,
+        .string,
+        .colon,
+        .whitespace,
+        .keyword_false,
+        .comma,
+        .whitespace,
+        .string,
+        .colon,
+        .whitespace,
+        .number,
+        .comma,
+        .whitespace,
+        .string,
+        .colon,
+        .whitespace,
+        .l_bracket,
+        .string,
+        .comma,
+        .whitespace,
+        .string,
+        .comma,
+        .whitespace,
+        .string,
+        .comma,
+        .whitespace,
+        .string,
+        .r_bracket,
+        .r_brace,
+    });
 }
 
 test "whitespace json" {
     const json_string_whitespace = "{ \"name\": \"John\" }";
-    try testTokenize(
-        json_string_whitespace, 
-        &.{
-            .l_brace,
-            .whitespace,
-            .string,
-            .colon,
-            .whitespace,
-            .string,
-            .whitespace,
-            .r_brace
-        });
+    try testTokenize(json_string_whitespace, &.{ .l_brace, .whitespace, .string, .colon, .whitespace, .string, .whitespace, .r_brace });
 
     const json_string_tab = "{\t\"name\":\t\"John\"\t}";
-    try testTokenize(
-        json_string_tab, 
-        &.{
-            .l_brace,
-            .whitespace,
-            .string,
-            .colon,
-            .whitespace,
-            .string,
-            .whitespace,
-            .r_brace
-        });
+    try testTokenize(json_string_tab, &.{ .l_brace, .whitespace, .string, .colon, .whitespace, .string, .whitespace, .r_brace });
 
     const json_string_newline = "{\n\"name\":\n\"John\"\n}";
-    try testTokenize(
-        json_string_newline, 
-        &.{
-            .l_brace,
-            .whitespace,
-            .string,
-            .colon,
-            .whitespace,
-            .string,
-            .whitespace,
-            .r_brace
-        });
+    try testTokenize(json_string_newline, &.{ .l_brace, .whitespace, .string, .colon, .whitespace, .string, .whitespace, .r_brace });
 }
 
 test "bool json" {
     const json_string_true = "{\"is_active\": true}";
-    try testTokenize(
-        json_string_true, 
-        &.{
-            .l_brace,
-            .string,
-            .colon,
-            .whitespace,
-            .keyword_true,
-            .r_brace
-        });
+    try testTokenize(json_string_true, &.{ .l_brace, .string, .colon, .whitespace, .keyword_true, .r_brace });
 
     const json_string_false = "{\"is_a_good_liar\": false}";
-    try testTokenize(
-        json_string_false, 
-        &.{
-            .l_brace,
-            .string,
-            .colon,
-            .whitespace,
-            .keyword_false,
-            .r_brace
-        });
+    try testTokenize(json_string_false, &.{ .l_brace, .string, .colon, .whitespace, .keyword_false, .r_brace });
 }
 
 test "int json" {
     const json_string_false = "{\"int_number\": 43}";
-    try testTokenize(
-        json_string_false, 
-        &.{
-            .l_brace,
-            .string,
-            .colon,
-            .whitespace,
-            .number,
-            .r_brace
-        });
+    try testTokenize(json_string_false, &.{ .l_brace, .string, .colon, .whitespace, .number, .r_brace });
 }
 
 test "float json" {
     const json_string_false = "{\"float_number\": 43.29}";
-    try testTokenize(
-        json_string_false, 
-        &.{
-            .l_brace,
-            .string,
-            .colon,
-            .whitespace,
-            .number,
-            .r_brace
-        });
+    try testTokenize(json_string_false, &.{ .l_brace, .string, .colon, .whitespace, .number, .r_brace });
 }

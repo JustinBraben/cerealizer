@@ -3,8 +3,8 @@ const Allocator = std.mem.Allocator;
 const cerealizer = @import("cerealizer");
 
 pub const Server = struct {
-    address: []const u8,    // no default value
-    port: u16,              // default value
+    address: []const u8, // no default value
+    port: u16, // default value
 };
 
 pub const ServerList = struct {
@@ -37,7 +37,6 @@ pub fn main() !void {
     // var loaded: ServerList = undefined;
     // loaded.servers.clear();
 
-    
     // pods::InputBuffer in(out.data(), out.size());
     // pods::JsonDeserializer<decltype(in)> deserializer(in);
     // if (deserializer.load(loaded) != pods::Error::NoError)

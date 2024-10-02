@@ -33,12 +33,12 @@ pub fn main() !void {
     // }
 
     //std.debug.print("Name: {s}\n", .{person.name});
-    std.debug.print("Name: {s}, Age: {d}\n", .{person.name, person.age});
+    std.debug.print("Name: {s}, Age: {d}\n", .{ person.name, person.age });
     // for (person.hobbies) |hobby| {
     //     std.debug.print("Hobby: {s}\n", .{hobby});
     // }
 
-    const valid_simple_json = 
+    const valid_simple_json =
         \\{
         \\    "name": "John Doe",
         \\    "age": 20,
@@ -46,7 +46,7 @@ pub fn main() !void {
         \\}
     ;
 
-    // const valid_simple_json = 
+    // const valid_simple_json =
     //     \\{"hobbies": [{},{}]}
     // ;
 
